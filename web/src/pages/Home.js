@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Heading, Button, Input, FormControl, FormLabel, VStack } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext';
-import { getKeyStore } from '../services/api';
+import { createKeyStore } from '../services/api';
 
 function Home() {
     const { setToken, isAuthenticated } = useAuth();
@@ -10,7 +10,7 @@ function Home() {
     const handleLogin = () => {
         // For this example, we're just using the password as the token.
         // In a real application, you would verify the password and obtain a token from your authentication service.
-        getKeyStore(password).then((token) => {
+        createKeyStore(password).then((token) => {
             setToken(token);
         });
     };

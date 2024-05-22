@@ -6,6 +6,15 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.crypto.SecretKey;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.Signature;
 import java.util.Base64;
 import java.util.List;
 import java.security.*;
@@ -16,6 +25,9 @@ public class CryptoController {
 
     @Autowired
     private CryptoService cryptoService;
+
+    @Autowired
+    private KeystoreUtil keystoreUtil;
 
     @PostMapping("/create-keystore")
     public ResponseEntity<String> createKeystore(@RequestBody KeystoreRequest request) {
@@ -132,6 +144,50 @@ public class CryptoController {
             return ResponseEntity.ok(decryptedData);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error decrypting data: " + e.getMessage());
+        }
+    }
+
+    // New endpoint to generate DSA key pair
+    @PostMapping("/generate/dsa")
+    public ResponseEntity<String> generateDSAKeyPair(@RequestParam int keySize, @RequestParam String alias,
+            @RequestParam String password, @RequestParam String randomAlgorithm) {
+        try {
+            char[] passwordArray = password.toCharArray();
+            SecureRandom random = SecureRandom.getInstance(randomAlgorithm);
+            KeyPair keyPair = cryptoService.generateDSAKeyPair(keySize, random);
+            cryptoService.storeDSAKeyPair(alias, keyPair, passwordArray);
+            return ResponseEntity.ok("DSA key pair generated and stored successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error generating/storing DSA key pair: " + e.getMessage());
+        }
+    }
+
+    // Endpoint to sign text
+    @PostMapping("/sign-text")
+    public ResponseEntity<String> signText(@RequestBody SignTextRequest request) {
+        try {
+            char[] passwordArray = request.getPassword().toCharArray();
+            PrivateKey privateKey = cryptoService.loadPrivateKey(request.getAlias(), passwordArray);
+            byte[] data = request.getText().getBytes();
+            byte[] signature = cryptoService.signData(data, privateKey);
+            return ResponseEntity.ok(Base64.getEncoder().encodeToString(signature));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error signing text: " + e.getMessage());
+        }
+    }
+
+    // Endpoint to verify text signature
+    @PostMapping("/verify-text")
+    public ResponseEntity<String> verifyTextSignature(@RequestBody VerifyTextRequest request) {
+        try {
+            char[] passwordArray = request.getPassword().toCharArray();
+            PublicKey publicKey = cryptoService.loadPublicKey(request.getAlias(), passwordArray);
+            byte[] data = request.getText().getBytes();
+            byte[] signatureBytes = Base64.getDecoder().decode(request.getSignature());
+            boolean isValid = cryptoService.verifySignature(data, signatureBytes, publicKey);
+            return ResponseEntity.ok(isValid ? "Signature is valid" : "Signature is invalid");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error verifying signature: " + e.getMessage());
         }
     }
 

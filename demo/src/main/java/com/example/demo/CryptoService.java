@@ -7,9 +7,12 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.Signature;
 import java.util.List;
 
 @Service
@@ -67,5 +70,28 @@ public class CryptoService {
         cipher.init(Cipher.DECRYPT_MODE, privateKey);
         return new String(cipher.doFinal(cipherText));
     }
-}
 
+    public KeyPair generateDSAKeyPair(int keySize, SecureRandom random) throws NoSuchAlgorithmException {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("DSA");
+        keyPairGenerator.initialize(keySize, random);
+        return keyPairGenerator.generateKeyPair();
+    }
+
+    public void storeDSAKeyPair(String alias, KeyPair keyPair, char[] password) throws Exception {
+        keystoreUtil.storeDSAKeyPair(alias, keyPair, password);
+    }
+
+    public byte[] signData(byte[] data, PrivateKey privateKey) throws Exception {
+        Signature signature = Signature.getInstance("SHA256withDSA");
+        signature.initSign(privateKey);
+        signature.update(data);
+        return signature.sign();
+    }
+
+    public boolean verifySignature(byte[] data, byte[] signatureBytes, PublicKey publicKey) throws Exception {
+        Signature signature = Signature.getInstance("SHA256withDSA");
+        signature.initVerify(publicKey);
+        signature.update(data);
+        return signature.verify(signatureBytes);
+    }
+}

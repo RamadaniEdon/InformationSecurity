@@ -17,8 +17,6 @@ import java.math.BigInteger;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
@@ -35,7 +33,8 @@ public class KeystoreUtil {
         Security.addProvider(new BouncyCastleProvider());
     }
 
-    public void createKeystore(char[] password) throws KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {
+    public void createKeystore(char[] password)
+            throws KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {
         KeyStore keystore = KeyStore.getInstance(KEYSTORE_TYPE);
         keystore.load(null, password);
         try (FileOutputStream fos = new FileOutputStream(KEYSTORE_FILE)) {
@@ -66,16 +65,18 @@ public class KeystoreUtil {
         return keyPairGenerator.generateKeyPair();
     }
 
+    public KeyPair generateDSAKeyPair(int keySize) throws NoSuchAlgorithmException {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("DSA");
+        keyPairGenerator.initialize(keySize, new SecureRandom());
+        return keyPairGenerator.generateKeyPair();
+    }
+
     public void storeRSAKeyPair(String alias, KeyPair keyPair, char[] password) throws Exception {
         KeyStore keystore = loadKeystore(password);
-
-        // Generate a self-signed certificate
-        X509Certificate certificate = generateSelfSignedCertificate(keyPair);
-
-        // Store the key pair with the certificate in the keystore
+        X509Certificate certificate = generateSelfSignedCertificate(keyPair, "SHA256withRSA");
         KeyStore.PrivateKeyEntry privateKeyEntry = new KeyStore.PrivateKeyEntry(
                 keyPair.getPrivate(),
-                new java.security.cert.Certificate[]{certificate});
+                new java.security.cert.Certificate[] { certificate });
 
         KeyStore.ProtectionParameter entryPassword = new KeyStore.PasswordProtection(password);
         keystore.setEntry(alias, privateKeyEntry, entryPassword);
@@ -83,18 +84,34 @@ public class KeystoreUtil {
             keystore.store(fos, password);
         }
 
-        savePEMFile(alias + "_public.pem", keyPair.getPublic().getEncoded(), "PUBLIC KEY");
-        savePEMFile(alias + "_private.pem", keyPair.getPrivate().getEncoded(), "PRIVATE KEY");
+        savePEMFile(alias + "_rsa_public.pem", keyPair.getPublic().getEncoded(), "PUBLIC KEY");
+        savePEMFile(alias + "_rsa_private.pem", keyPair.getPrivate().getEncoded(), "PRIVATE KEY");
     }
 
-    private X509Certificate generateSelfSignedCertificate(KeyPair keyPair) throws Exception {
+    public void storeDSAKeyPair(String alias, KeyPair keyPair, char[] password) throws Exception {
+        KeyStore keystore = loadKeystore(password);
+        X509Certificate certificate = generateSelfSignedCertificate(keyPair, "SHA256withDSA");
+        KeyStore.PrivateKeyEntry privateKeyEntry = new KeyStore.PrivateKeyEntry(
+                keyPair.getPrivate(),
+                new java.security.cert.Certificate[] { certificate });
+
+        KeyStore.ProtectionParameter entryPassword = new KeyStore.PasswordProtection(password);
+        keystore.setEntry(alias, privateKeyEntry, entryPassword);
+        try (FileOutputStream fos = new FileOutputStream(KEYSTORE_FILE)) {
+            keystore.store(fos, password);
+        }
+
+        savePEMFile(alias + "_dsa_public.pem", keyPair.getPublic().getEncoded(), "PUBLIC KEY");
+        savePEMFile(alias + "_dsa_private.pem", keyPair.getPrivate().getEncoded(), "PRIVATE KEY");
+    }
+
+    private X509Certificate generateSelfSignedCertificate(KeyPair keyPair, String algorithm) throws Exception {
         X500Name issuer = new X500Name("CN=Self-Signed, O=Example Corp, C=US");
         BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
         Date notBefore = new Date();
         Date notAfter = new Date(notBefore.getTime() + (365 * 24 * 60 * 60 * 1000L)); // 1 year validity
 
-        ContentSigner signer = new JcaContentSignerBuilder("SHA256withRSA")
-                .build(keyPair.getPrivate());
+        ContentSigner signer = new JcaContentSignerBuilder(algorithm).build(keyPair.getPrivate());
 
         X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
                 issuer,
@@ -146,7 +163,8 @@ public class KeystoreUtil {
 
     private void savePEMFile(String filename, byte[] encoded, String description) throws IOException {
         String base64Encoded = Base64.getEncoder().encodeToString(encoded);
-        String pemContent = "-----BEGIN " + description + "-----\n" + base64Encoded + "\n-----END " + description + "-----";
+        String pemContent = "-----BEGIN " + description + "-----\n" + base64Encoded + "\n-----END " + description
+                + "-----";
         try (FileOutputStream fos = new FileOutputStream(filename)) {
             fos.write(pemContent.getBytes());
         }

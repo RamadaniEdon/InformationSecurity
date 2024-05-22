@@ -16,7 +16,7 @@ const Navbar = () => {
           mx={4} 
           size="lg"
           _hover={{ bg: "white", color: "teal.500" }}
-          isActive={location.pathname === '/encrypt/aes'}
+          isActive={location.pathname === '/encrypt/aes' || location.pathname === '/encrypt/aes/'}
           _active={{ bg: "white", color: "teal.500" }}
         >
           AES
@@ -29,7 +29,7 @@ const Navbar = () => {
           mx={4} 
           size="lg"
           _hover={{ bg: "white", color: "teal.500" }}
-          isActive={location.pathname === '/encrypt/rsa'}
+          isActive={location.pathname === '/encrypt/rsa' || location.pathname === '/encrypt/rsa/'}
           _active={{ bg: "white", color: "teal.500" }}
         >
           RSA
@@ -42,7 +42,7 @@ const Navbar = () => {
           mx={4} 
           size="lg"
           _hover={{ bg: "white", color: "teal.500" }}
-          isActive={location.pathname === '/encrypt/dsa'}
+          isActive={location.pathname === '/encrypt/dsa' || location.pathname === '/encrypt/dsa/'}
           _active={{ bg: "white", color: "teal.500" }}
         >
           DSA

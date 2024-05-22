@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex } from '@chakra-ui/react';
-import Cryptor from './AESCryptor';
+import Cryptor from './RSACryptor';
 
 const RSA = () => {
     const [keyAlias, setKeyAlias] = useState('');

@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import com.example.demo.VerifyTextRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,7 +46,8 @@ public class CryptoController {
         try {
             char[] passwordArray = request.getPassword().toCharArray();
             SecretKey secretKey = cryptoService.generateAESKey(request.getKeySize());
-            cryptoService.storeAESKey(request.getAlias(), secretKey, passwordArray);
+            String aesAlias = "aes_"+request.getAlias();
+            cryptoService.storeAESKey(aesAlias, secretKey, passwordArray);
             return ResponseEntity.ok(Base64.getEncoder().encodeToString(secretKey.getEncoded()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error generating/storing key: " + e.getMessage());
@@ -114,7 +116,8 @@ public class CryptoController {
         try {
             char[] passwordArray = request.getPassword().toCharArray();
             KeyPair keyPair = cryptoService.generateRSAKeyPair(request.getKeySize());
-            cryptoService.storeRSAKeyPair(request.getAlias(), keyPair, passwordArray);
+            String rsaAlias = "rsa_"+request.getAlias();
+            cryptoService.storeRSAKeyPair(rsaAlias, keyPair, passwordArray);
             return ResponseEntity.ok("RSA key pair generated and stored successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error generating/storing RSA key pair: " + e.getMessage());
@@ -147,14 +150,13 @@ public class CryptoController {
         }
     }
 
-    // New endpoint to generate DSA key pair
     @PostMapping("/generate/dsa")
     public ResponseEntity<String> generateDSAKeyPair(@RequestParam int keySize, @RequestParam String alias,
-            @RequestParam String password, @RequestParam String randomAlgorithm) {
+            @RequestParam String password) {
         try {
             char[] passwordArray = password.toCharArray();
-            SecureRandom random = SecureRandom.getInstance(randomAlgorithm);
-            KeyPair keyPair = cryptoService.generateDSAKeyPair(keySize, random);
+            KeyPair keyPair = cryptoService.generateDSAKeyPair(keySize);
+            // String dsaAlias = "dsa_"+request.getAlias();
             cryptoService.storeDSAKeyPair(alias, keyPair, passwordArray);
             return ResponseEntity.ok("DSA key pair generated and stored successfully");
         } catch (Exception e) {
@@ -162,21 +164,20 @@ public class CryptoController {
         }
     }
 
-    // Endpoint to sign text
     @PostMapping("/sign-text")
-    public ResponseEntity<String> signText(@RequestBody SignTextRequest request) {
+    public ResponseEntity<String> signText(@RequestBody EncryptRequest request) {
         try {
             char[] passwordArray = request.getPassword().toCharArray();
             PrivateKey privateKey = cryptoService.loadPrivateKey(request.getAlias(), passwordArray);
-            byte[] data = request.getText().getBytes();
-            byte[] signature = cryptoService.signData(data, privateKey);
+            SecureRandom random = cryptoService.getSecureRandom(request.getRandomAlgorithm(), request.getSeed());
+            byte[] data = request.getPlainText().getBytes();
+            byte[] signature = cryptoService.signData(data, privateKey, random);
             return ResponseEntity.ok(Base64.getEncoder().encodeToString(signature));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error signing text: " + e.getMessage());
         }
     }
 
-    // Endpoint to verify text signature
     @PostMapping("/verify-text")
     public ResponseEntity<String> verifyTextSignature(@RequestBody VerifyTextRequest request) {
         try {
@@ -218,6 +219,17 @@ public class CryptoController {
             }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error loading private key: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/filter-aliases")
+    public ResponseEntity<List<String>> filterAliases(@RequestBody FilterAliasesRequest request) {
+        try {
+            char[] passwordArray = request.getPassword().toCharArray();
+            List<String> filteredAliases = cryptoService.filterAliases(passwordArray, request.getFilter());
+            return ResponseEntity.ok(filteredAliases);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
         }
     }
 }

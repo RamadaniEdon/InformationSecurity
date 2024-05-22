@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.Base64;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CryptoService {
@@ -108,9 +109,9 @@ public class CryptoService {
         return random;
     }
 
-    public KeyPair generateDSAKeyPair(int keySize, SecureRandom random) throws NoSuchAlgorithmException {
+    public KeyPair generateDSAKeyPair(int keySize) throws NoSuchAlgorithmException {
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("DSA");
-        keyPairGenerator.initialize(keySize, random);
+        keyPairGenerator.initialize(keySize);
         return keyPairGenerator.generateKeyPair();
     }
 
@@ -118,9 +119,9 @@ public class CryptoService {
         keystoreUtil.storeDSAKeyPair(alias, keyPair, password);
     }
 
-    public byte[] signData(byte[] data, PrivateKey privateKey) throws Exception {
+    public byte[] signData(byte[] data, PrivateKey privateKey, SecureRandom random) throws Exception {
         Signature signature = Signature.getInstance("SHA256withDSA");
-        signature.initSign(privateKey);
+        signature.initSign(privateKey, random);
         signature.update(data);
         return signature.sign();
     }
@@ -130,5 +131,12 @@ public class CryptoService {
         signature.initVerify(publicKey);
         signature.update(data);
         return signature.verify(signatureBytes);
+    }
+
+    public List<String> filterAliases(char[] password, String filter) throws Exception {
+        List<String> aliases = keystoreUtil.getAliases(password);
+        return aliases.stream()
+                      .filter(alias -> alias.contains(filter))
+                      .collect(Collectors.toList());
     }
 }

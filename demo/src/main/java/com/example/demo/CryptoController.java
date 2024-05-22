@@ -151,13 +151,12 @@ public class CryptoController {
     }
 
     @PostMapping("/generate/dsa")
-    public ResponseEntity<String> generateDSAKeyPair(@RequestParam int keySize, @RequestParam String alias,
-            @RequestParam String password) {
+    public ResponseEntity<String> generateDSAKeyPair(@RequestBody GenerateKeyRequest request) {
         try {
-            char[] passwordArray = password.toCharArray();
-            KeyPair keyPair = cryptoService.generateDSAKeyPair(keySize);
+            char[] passwordArray = request.getPassword().toCharArray();
+            KeyPair keyPair = cryptoService.generateDSAKeyPair(request.getKeySize());
             // String dsaAlias = "dsa_"+request.getAlias();
-            cryptoService.storeDSAKeyPair(alias, keyPair, passwordArray);
+            cryptoService.storeDSAKeyPair(request.getAlias(), keyPair, passwordArray);
             return ResponseEntity.ok("DSA key pair generated and stored successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error generating/storing DSA key pair: " + e.getMessage());

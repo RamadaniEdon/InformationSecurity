@@ -24,6 +24,11 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 
 @Component
 public class KeystoreUtil {
@@ -86,8 +91,8 @@ public class KeystoreUtil {
             keystore.store(fos, password);
         }
 
-        savePEMFile(alias + "_rsa_public.pem", keyPair.getPublic().getEncoded(), "PUBLIC KEY");
-        savePEMFile(alias + "_rsa_private.pem", keyPair.getPrivate().getEncoded(), "PRIVATE KEY");
+        savePEMFile(alias + "_public.pem", keyPair.getPublic().getEncoded(), "PUBLIC KEY");
+        savePEMFile(alias + "_private.pem", keyPair.getPrivate().getEncoded(), "PRIVATE KEY");
     }
 
     public void storeDSAKeyPair(String alias, KeyPair keyPair, char[] password) throws Exception {
@@ -103,8 +108,8 @@ public class KeystoreUtil {
             keystore.store(fos, password);
         }
 
-        savePEMFile(alias + "_dsa_public.pem", keyPair.getPublic().getEncoded(), "PUBLIC KEY");
-        savePEMFile(alias + "_dsa_private.pem", keyPair.getPrivate().getEncoded(), "PRIVATE KEY");
+        savePEMFile(alias + "_public.pem", keyPair.getPublic().getEncoded(), "PUBLIC KEY");
+        savePEMFile(alias + "_private.pem", keyPair.getPrivate().getEncoded(), "PRIVATE KEY");
     }
 
     private X509Certificate generateSelfSignedCertificate(KeyPair keyPair, String algorithm) throws Exception {
@@ -177,12 +182,12 @@ public class KeystoreUtil {
             KeyStore keystore = KeyStore.getInstance(KEYSTORE_TYPE);
             try (FileInputStream fis = new FileInputStream(KEYSTORE_FILE)) {
                 keystore.load(fis, password);
-                return true; // Keystore loaded successfully
+                return true;
             } catch (IOException | NoSuchAlgorithmException | CertificateException e) {
-                return false; // Keystore does not exist or wrong password
+                return false;
             }
         } catch (KeyStoreException e) {
-            return false; // Problem with keystore configuration
+            return false;
         }
     }
 
@@ -201,6 +206,20 @@ public class KeystoreUtil {
         String privateFile = alias + "_" + type + "_private.pem";
         Files.deleteIfExists(Paths.get(publicFile));
         Files.deleteIfExists(Paths.get(privateFile));
+    }
+    
+    public List<String> getAllPublicKeyNames() {
+        List<String> publicKeyNames = new ArrayList<>();
+        Path dir = Paths.get(".");
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*_public.pem")) {
+            for (Path filePath : stream) {
+                String fileName = filePath.getFileName().toString();
+                publicKeyNames.add(fileName.substring(0, fileName.length() - 4));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return publicKeyNames;
     }
 
 }

@@ -142,8 +142,8 @@ public class CryptoController {
     @PostMapping("/encrypt/rsa")
     public ResponseEntity<String> encryptRSA(@RequestBody EncryptRequest request) {
         try {
-            char[] passwordArray = request.getPassword().toCharArray();
-            PublicKey publicKey = cryptoService.loadPublicKey(request.getAlias(), passwordArray);
+            // char[] passwordArray = request.getPassword().toCharArray();
+            PublicKey publicKey = cryptoService.loadPublicKeyNoPassword(request.getAlias(), "RSA");
             byte[] encryptedData = cryptoService.encryptRSA(request.getPlainText(), publicKey);
             return ResponseEntity.ok(Base64.getEncoder().encodeToString(encryptedData));
         } catch (Exception e) {
@@ -193,8 +193,8 @@ public class CryptoController {
     @PostMapping("/verify-text")
     public ResponseEntity<String> verifyTextSignature(@RequestBody VerifyTextRequest request) {
         try {
-            char[] passwordArray = request.getPassword().toCharArray();
-            PublicKey publicKey = cryptoService.loadPublicKey(request.getAlias(), passwordArray);
+            // char[] passwordArray = request.getPassword().toCharArray();
+            PublicKey publicKey = cryptoService.loadPublicKeyNoPassword(request.getAlias(), "DSA");
             byte[] data = request.getText().getBytes();
             byte[] signatureBytes = Base64.getDecoder().decode(request.getSignature());
             boolean isValid = cryptoService.verifySignature(data, signatureBytes, publicKey);

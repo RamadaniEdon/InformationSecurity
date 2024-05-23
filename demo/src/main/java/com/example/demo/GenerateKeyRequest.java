@@ -4,8 +4,9 @@ public class GenerateKeyRequest {
     private int keySize;
     private String alias;
     private String password;
+    private String randomAlgorithm;
+    private Long seed;
 
-    // Getters and setters
     public int getKeySize() {
         return keySize;
     }
@@ -28,5 +29,21 @@ public class GenerateKeyRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getRandomAlgorithm() {
+        return randomAlgorithm;
+    }
+
+    public void setRandomAlgorithm(String randomAlgorithm) {
+        this.randomAlgorithm = randomAlgorithm;
+    }
+
+    public Long getSeed() {
+        return seed;
+    }
+
+    public void setSeed(Long seed) {
+        this.seed = seed;
     }
 }

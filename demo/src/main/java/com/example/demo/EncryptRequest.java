@@ -4,10 +4,7 @@ public class EncryptRequest {
     private String plainText;
     private String alias;
     private String password;
-    private String randomAlgorithm;
-    private Long seed;
 
-    // Getters and setters
     public String getPlainText() {
         return plainText;
     }
@@ -30,21 +27,5 @@ public class EncryptRequest {
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public String getRandomAlgorithm() {
-        return randomAlgorithm;
-    }
-
-    public void setRandomAlgorithm(String randomAlgorithm) {
-        this.randomAlgorithm = randomAlgorithm;
-    }
-
-    public Long getSeed() {
-        return seed;
-    }
-
-    public void setSeed(Long seed) {
-        this.seed = seed;
     }
 }

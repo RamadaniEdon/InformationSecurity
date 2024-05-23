@@ -6,13 +6,6 @@ import org.springframework.stereotype.Service;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.SecureRandom;
-import java.security.Signature;
 import javax.crypto.spec.GCMParameterSpec;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -34,9 +27,10 @@ public class CryptoService {
         keystoreUtil.createKeystore(password);
     }
 
-    public SecretKey generateAESKey(int keySize) throws Exception {
+    public SecretKey generateAESKey(int keySize, String randomAlgorithm, Long seed) throws Exception {
+        SecureRandom secureRandom = getSecureRandom(randomAlgorithm, seed);
         KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-        keyGen.init(keySize);
+        keyGen.init(keySize, secureRandom);
         return keyGen.generateKey();
     }
 
@@ -48,8 +42,11 @@ public class CryptoService {
         return keystoreUtil.loadSecretKey(alias, password);
     }
 
-    public KeyPair generateRSAKeyPair(int keySize) throws NoSuchAlgorithmException {
-        return keystoreUtil.generateRSAKeyPair(keySize);
+    public KeyPair generateRSAKeyPair(int keySize, String randomAlgorithm, Long seed) throws NoSuchAlgorithmException {
+        SecureRandom secureRandom = getSecureRandom(randomAlgorithm, seed);
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+        keyPairGenerator.initialize(keySize, secureRandom);
+        return keyPairGenerator.generateKeyPair();
     }
 
     public void storeRSAKeyPair(String alias, KeyPair keyPair, char[] password) throws Exception {
@@ -68,9 +65,9 @@ public class CryptoService {
         return keystoreUtil.getAliases(password);
     }
 
-    public byte[] encryptRSA(String plainText, PublicKey publicKey, SecureRandom random) throws Exception {
+    public byte[] encryptRSA(String plainText, PublicKey publicKey) throws Exception {
         Cipher cipher = Cipher.getInstance("RSA");
-        cipher.init(Cipher.ENCRYPT_MODE, publicKey, random);
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
         return cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -81,10 +78,10 @@ public class CryptoService {
         return new String(decryptedBytes, StandardCharsets.UTF_8);
     }
 
-    public byte[] encryptAES(String plainText, SecretKey secretKey, byte[] iv, SecureRandom random) throws Exception {
+    public byte[] encryptAES(String plainText, SecretKey secretKey, byte[] iv) throws Exception {
         Cipher cipher = Cipher.getInstance(AES_ALGORITHM);
         GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameterSpec, random);
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameterSpec);
         return cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -109,9 +106,10 @@ public class CryptoService {
         return random;
     }
 
-    public KeyPair generateDSAKeyPair(int keySize) throws NoSuchAlgorithmException {
+    public KeyPair generateDSAKeyPair(int keySize, String randomAlgorithm, Long seed) throws NoSuchAlgorithmException {
+        SecureRandom secureRandom = getSecureRandom(randomAlgorithm, seed);
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("DSA");
-        keyPairGenerator.initialize(keySize);
+        keyPairGenerator.initialize(keySize, secureRandom);
         return keyPairGenerator.generateKeyPair();
     }
 
@@ -119,9 +117,9 @@ public class CryptoService {
         keystoreUtil.storeDSAKeyPair(alias, keyPair, password);
     }
 
-    public byte[] signData(byte[] data, PrivateKey privateKey, SecureRandom random) throws Exception {
+    public byte[] signData(byte[] data, PrivateKey privateKey) throws Exception {
         Signature signature = Signature.getInstance("SHA256withDSA");
-        signature.initSign(privateKey, random);
+        signature.initSign(privateKey);
         signature.update(data);
         return signature.sign();
     }
@@ -136,7 +134,32 @@ public class CryptoService {
     public List<String> filterAliases(char[] password, String filter) throws Exception {
         List<String> aliases = keystoreUtil.getAliases(password);
         return aliases.stream()
-                      .filter(alias -> alias.contains(filter))
-                      .collect(Collectors.toList());
+                .filter(alias -> alias.contains(filter))
+                .collect(Collectors.toList());
     }
+
+    public void deleteAESKey(String alias, char[] password) throws Exception {
+        keystoreUtil.deleteKey(alias, password);
+    }
+
+    public void deleteRSAKeyPair(String alias, char[] password) throws Exception {
+        keystoreUtil.deleteKey(alias, password);
+        keystoreUtil.deletePEMFiles(alias, "rsa");
+    }
+
+    public void deleteDSAKeyPair(String alias, char[] password) throws Exception {
+        keystoreUtil.deleteKey(alias, password);
+        keystoreUtil.deletePEMFiles(alias, "dsa");
+    }
+
+    public PublicKey loadPublicKeyNoPassword(String alias, String keyType) throws Exception {
+        KeyStore keystore = keystoreUtil.loadKeystoreWithoutPassword();
+        java.security.cert.Certificate cert = keystore.getCertificate(alias);
+        if (cert != null) {
+            return cert.getPublicKey();
+        }
+        return null;
+    }
+    
+
 }

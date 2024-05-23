@@ -169,4 +169,19 @@ public class KeystoreUtil {
             fos.write(pemContent.getBytes());
         }
     }
+
+    public boolean keystoreExists(char[] password) {
+        try {
+            KeyStore keystore = KeyStore.getInstance(KEYSTORE_TYPE);
+            try (FileInputStream fis = new FileInputStream(KEYSTORE_FILE)) {
+                keystore.load(fis, password);
+                return true; // Keystore loaded successfully
+            } catch (IOException | NoSuchAlgorithmException | CertificateException e) {
+                return false; // Keystore does not exist or wrong password
+            }
+        } catch (KeyStoreException e) {
+            return false; // Problem with keystore configuration
+        }
+    }
+
 }

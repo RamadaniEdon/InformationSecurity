@@ -2,6 +2,7 @@ package com.example.demo;
 
 import com.example.demo.VerifyTextRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,12 +42,27 @@ public class CryptoController {
         }
     }
 
+    @PostMapping("/login-keystore")
+    public ResponseEntity<Boolean> loginKeystore(@RequestBody KeystoreRequest request) {
+        try {
+            boolean exists = keystoreUtil.keystoreExists(request.getPassword().toCharArray());
+            if (exists) {
+                return ResponseEntity.ok(true); // Keystore exists and password is correct
+            } else {
+                return ResponseEntity.badRequest().body(false); // Keystore does not exist or wrong password
+            }
+        } catch (Exception e) {
+            // Internal server error if there's an unexpected exception
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(false);
+        }
+    }
+
     @PostMapping("/generate/aes")
     public ResponseEntity<String> generateAESKey(@RequestBody GenerateKeyRequest request) {
         try {
             char[] passwordArray = request.getPassword().toCharArray();
             SecretKey secretKey = cryptoService.generateAESKey(request.getKeySize());
-            String aesAlias = "aes_"+request.getAlias();
+            String aesAlias = "aes_" + request.getAlias();
             cryptoService.storeAESKey(aesAlias, secretKey, passwordArray);
             return ResponseEntity.ok(Base64.getEncoder().encodeToString(secretKey.getEncoded()));
         } catch (Exception e) {
@@ -78,7 +94,8 @@ public class CryptoController {
             SecureRandom random = cryptoService.getSecureRandom(request.getRandomAlgorithm(), request.getSeed());
             random.nextBytes(iv);
             byte[] encryptedData = cryptoService.encryptAES(request.getPlainText(), secretKey, iv, random);
-            String ivAndCipherText = Base64.getEncoder().encodeToString(iv) + ":" + Base64.getEncoder().encodeToString(encryptedData);
+            String ivAndCipherText = Base64.getEncoder().encodeToString(iv) + ":"
+                    + Base64.getEncoder().encodeToString(encryptedData);
             return ResponseEntity.ok(ivAndCipherText);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error encrypting data: " + e.getMessage());
@@ -116,7 +133,7 @@ public class CryptoController {
         try {
             char[] passwordArray = request.getPassword().toCharArray();
             KeyPair keyPair = cryptoService.generateRSAKeyPair(request.getKeySize());
-            String rsaAlias = "rsa_"+request.getAlias();
+            String rsaAlias = "rsa_" + request.getAlias();
             cryptoService.storeRSAKeyPair(rsaAlias, keyPair, passwordArray);
             return ResponseEntity.ok("RSA key pair generated and stored successfully");
         } catch (Exception e) {

@@ -5,7 +5,6 @@ public class DecryptRequest {
     private String alias;
     private String password;
 
-    // Getters and setters
     public String getCipherText() {
         return cipherText;
     }

@@ -6,7 +6,6 @@ public class FilterAliasesRequest {
     private String filter;
     private String password;
 
-    // Getters and setters
     public String getFilter() {
         return filter;
     }

@@ -136,7 +136,21 @@ public class CryptoService {
     public List<String> filterAliases(char[] password, String filter) throws Exception {
         List<String> aliases = keystoreUtil.getAliases(password);
         return aliases.stream()
-                      .filter(alias -> alias.contains(filter))
-                      .collect(Collectors.toList());
+                .filter(alias -> alias.contains(filter))
+                .collect(Collectors.toList());
+    }
+
+    public void deleteAESKey(String alias, char[] password) throws Exception {
+        keystoreUtil.deleteKey(alias, password);
+    }
+
+    public void deleteRSAKeyPair(String alias, char[] password) throws Exception {
+        keystoreUtil.deleteKey(alias, password);
+        keystoreUtil.deletePEMFiles(alias, "rsa");
+    }
+
+    public void deleteDSAKeyPair(String alias, char[] password) throws Exception {
+        keystoreUtil.deleteKey(alias, password);
+        keystoreUtil.deletePEMFiles(alias, "dsa");
     }
 }

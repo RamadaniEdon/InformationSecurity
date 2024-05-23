@@ -14,6 +14,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -182,6 +184,23 @@ public class KeystoreUtil {
         } catch (KeyStoreException e) {
             return false; // Problem with keystore configuration
         }
+    }
+
+    public void deleteKey(String alias, char[] password) throws Exception {
+        KeyStore keystore = loadKeystore(password);
+        if (keystore.containsAlias(alias)) {
+            keystore.deleteEntry(alias);
+            try (FileOutputStream fos = new FileOutputStream(KEYSTORE_FILE)) {
+                keystore.store(fos, password);
+            }
+        }
+    }
+
+    public void deletePEMFiles(String alias, String type) throws IOException {
+        String publicFile = alias + "_" + type + "_public.pem";
+        String privateFile = alias + "_" + type + "_private.pem";
+        Files.deleteIfExists(Paths.get(publicFile));
+        Files.deleteIfExists(Paths.get(privateFile));
     }
 
 }

@@ -248,4 +248,38 @@ public class CryptoController {
             return ResponseEntity.badRequest().body(null);
         }
     }
+
+    @DeleteMapping("/delete/aes")
+    public ResponseEntity<String> deleteAESKey(@RequestParam String alias, @RequestParam String password) {
+        try {
+            char[] passwordArray = password.toCharArray();
+            cryptoService.deleteAESKey(alias, passwordArray);
+            return ResponseEntity.ok("AES key deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error deleting AES key: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/delete/rsa")
+    public ResponseEntity<String> deleteRSAKeyPair(@RequestParam String alias, @RequestParam String password) {
+        try {
+            char[] passwordArray = password.toCharArray();
+            cryptoService.deleteRSAKeyPair(alias, passwordArray);
+            return ResponseEntity.ok("RSA key pair and PEM files deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error deleting RSA key pair: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/delete/dsa")
+    public ResponseEntity<String> deleteDSAKeyPair(@RequestParam String alias, @RequestParam String password) {
+        try {
+            char[] passwordArray = password.toCharArray();
+            cryptoService.deleteDSAKeyPair(alias, passwordArray);
+            return ResponseEntity.ok("DSA key pair and PEM files deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error deleting DSA key pair: " + e.getMessage());
+        }
+    }
+
 }

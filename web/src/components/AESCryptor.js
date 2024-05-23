@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Heading, FormControl, FormLabel, Textarea, Select, Button, Flex } from '@chakra-ui/react';
+import { encryptAES } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-const EncryptDecryptForm = () => {
+const EncryptDecryptForm = ({keys, setKeys}) => {
+    const {token, setToken} = useAuth();
     const [plainText, setPlainText] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
     const [result, setResult] = useState('');
@@ -21,10 +24,18 @@ const EncryptDecryptForm = () => {
     }, [result]);
 
     const handleEncryptDecrypt = (op) => {
-        setOperation(op);
-        // Placeholder logic for encryption/decryption
-        const operationResult = `${op === 'encrypt' ? 'Encrypted' : 'Decrypted'}: ${plainText}`;
-        setResult(operationResult);
+        if(!selectedKey){
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+        }
+        if(op === 'encrypt'){
+            // encryptAES(token, plainText, sele)
+        }
+        else {
+            console.log("Decrypting")
+        }
     };
 
     const handleFileUpload = (event) => {
@@ -85,11 +96,14 @@ const EncryptDecryptForm = () => {
                             <Select 
                                 value={selectedKey} 
                                 onChange={(e) => setSelectedKey(e.target.value)}
-                                placeholder="Select key"
                             >
-                                {/* Option values will be populated dynamically */}
-                                <option value="key1">Key 1</option>
-                                <option value="key2">Key 2</option>
+                                {keys.length > 0 ? (
+                                    keys.map((key) => (
+                                        <option key={key} value={key}>{key}</option>
+                                    ))
+                                ) : (
+                                    <option value="">No keys available</option>
+                                )}
                             </Select>
                         </FormControl>
                         <Flex justifyContent="space-between" mt={4}>

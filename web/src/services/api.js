@@ -23,6 +23,8 @@ async function sendRequest(url, { method = "GET", body, headers = {} }) {
         body: body ? JSON.stringify(body) : null,
     };
 
+    console.log(headers);
+
     return fetch(url, options).then((res) => {
         const jsonOrTextPromise = transformToJsonOrTextPromise(res);
 
@@ -65,12 +67,9 @@ export async function generateAESKey(password, keySize, alias) {
 }
 
 export async function getAESKey(password, alias) {
-    return sendRequest(BACKEND_URL + `load/aes`, {
-        headers: {
-            alias,
-            password,
-        },
-    });
+    const url = new URL(BACKEND_URL + `load/aes`);
+    url.search = new URLSearchParams({ alias, password }).toString();
+    return sendRequest(url, {});
 }
 
 
@@ -100,7 +99,7 @@ export async function decryotAES(password, cipherText, alias) {
 }
 
 export async function getAliases(password) {
-    return sendRequest(BACKEND_URL + `decrypt/aes`, {
+    return sendRequest(BACKEND_URL + `aliases`, {
         headers: {
             password,
         },
@@ -200,6 +199,7 @@ export async function getRSAPrivateKey(password, alias) {
 }
 
 export async function getFilteredAliases(password, filter) {
+    console.log("EDo", password)
     return sendRequest(BACKEND_URL + `filter-aliases`, {
         method: "POST",
         body: {

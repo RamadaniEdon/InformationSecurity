@@ -4,14 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { createKeyStore } from '../services/api';
 
 function Home() {
-    const { setToken, isAuthenticated } = useAuth();
+    const { setToken } = useAuth();
     const [password, setPassword] = useState('');
 
     const handleLogin = () => {
         // For this example, we're just using the password as the token.
         // In a real application, you would verify the password and obtain a token from your authentication service.
         createKeyStore(password).then((token) => {
-            setToken(token);
+            setToken(password);
         });
     };
 

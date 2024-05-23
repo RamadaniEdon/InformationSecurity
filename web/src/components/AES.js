@@ -1,13 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex } from '@chakra-ui/react';
 import Cryptor from './AESCryptor';
+import { useAuth } from '../context/AuthContext';
+import { generateAESKey, getAESKey, getFilteredAliases } from '../services/api';
 
 const AES = () => {
+    const {token, setToken} = useAuth();
     const [keyAlias, setKeyAlias] = useState('');
     const [keySize, setKeySize] = useState('');
     const [randomnessSource, setRandomnessSource] = useState('');
     const [generatedKey, setGeneratedKey] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
+    const [keys, setKeys] = useState([]);
 
     // Ref for the div element
     const divRef = useRef(null);
@@ -23,16 +27,37 @@ const AES = () => {
     // Call autoResizeDiv function whenever the generatedKey changes
     useEffect(() => {
         autoResizeDiv();
-    }, [generatedKey]);
+        getFilteredAliases(token, "aes_").then((keys) => {
+            setKeys(keys);
+        });
+    }, []);
+
+    const resetState = () => {
+        setKeySize('');
+        setRandomnessSource('');
+        setGeneratedKey('');
+    }
 
     const handleGenerateKey = () => {
-        // Logic to generate the key based on input values
-        // For demonstration purposes, simply setting a random string as the generated key
-        const randomKey = Math.random().toString(36).substr(2, 8);
-        setGeneratedKey(randomKey);
+        // const randomKey = Math.random().toString(36).substr(2, 8);
+        // setGeneratedKey(randomKey);
+        generateAESKey(token, keySize, keyAlias).then((key) => {
+            resetState();
+            setGeneratedKey(key);
+            setKeys([...keys, "aes_"+keyAlias]);
+            setSelectedKey("aes_"+keyAlias);
+        })
+
+
     };
 
     const handleSelectKey = (key) => {
+        if(key){
+            console.log(key)
+            getAESKey(token, key).then((key) => {
+                setGeneratedKey(key);
+            });
+        }
         setSelectedKey(key);
         // Logic to handle the selected key
     };
@@ -46,12 +71,13 @@ const AES = () => {
                         <Box width="48%">
                             <form>
                                 <FormControl id="keyAlias" mb={4}>
-                                    <FormLabel>Key Alias</FormLabel>
-                                    <Input type="text" value={keyAlias} onChange={(e) => setKeyAlias(e.target.value)} />
+                                    <FormLabel>Key Name</FormLabel>
+                                    <Input type="text" placeholder='Enter key name...' value={keyAlias} onChange={(e) => setKeyAlias(e.target.value)} />
                                 </FormControl>
                                 <FormControl id="keySize" mb={4}>
                                     <FormLabel>Key Size</FormLabel>
                                     <Select value={keySize} onChange={(e) => setKeySize(e.target.value)}>
+                                        <option value="">Select size</option>
                                         <option value="128">128 bits</option>
                                         <option value="192">192 bits</option>
                                         <option value="256">256 bits</option>
@@ -60,6 +86,7 @@ const AES = () => {
                                 <FormControl id="randomnessSource" mb={4}>
                                     <FormLabel>Randomness Source</FormLabel>
                                     <Select value={randomnessSource} onChange={(e) => setRandomnessSource(e.target.value)}>
+                                        <option value="">Select randomness</option>
                                         <option value="hardware">Hardware</option>
                                         <option value="software">Software</option>
                                     </Select>
@@ -71,7 +98,10 @@ const AES = () => {
                             <FormControl mb={4}>
                                 <FormLabel>Select Key</FormLabel>
                                 <Select value={selectedKey} onChange={(e) => handleSelectKey(e.target.value)}>
-                                    {/* Option values will be populated dynamically */}
+                                    <option value="">Select key</option>
+                                    {keys.map((key) => (
+                                        <option key={key} value={key}>{key}</option>
+                                    ))}
                                 </Select>
                             </FormControl>
                             <div
@@ -94,7 +124,7 @@ const AES = () => {
                     </Flex>
                 </Box>
             </Box>
-            <Cryptor />
+            <Cryptor keys={keys} setKeys={setKeys}/>
         </>
     );
 };

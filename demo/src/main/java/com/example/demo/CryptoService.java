@@ -6,13 +6,6 @@ import org.springframework.stereotype.Service;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.SecureRandom;
-import java.security.Signature;
 import javax.crypto.spec.GCMParameterSpec;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -158,4 +151,15 @@ public class CryptoService {
         keystoreUtil.deleteKey(alias, password);
         keystoreUtil.deletePEMFiles(alias, "dsa");
     }
+
+    public PublicKey loadPublicKeyNoPassword(String alias, String keyType) throws Exception {
+        KeyStore keystore = keystoreUtil.loadKeystoreWithoutPassword();
+        java.security.cert.Certificate cert = keystore.getCertificate(alias);
+        if (cert != null) {
+            return cert.getPublicKey();
+        }
+        return null;
+    }
+    
+
 }

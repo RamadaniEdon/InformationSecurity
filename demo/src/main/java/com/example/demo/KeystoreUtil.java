@@ -29,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-
 @Component
 public class KeystoreUtil {
 
@@ -207,7 +206,7 @@ public class KeystoreUtil {
         Files.deleteIfExists(Paths.get(publicFile));
         Files.deleteIfExists(Paths.get(privateFile));
     }
-    
+
     public List<String> getAllPublicKeyNames() {
         List<String> publicKeyNames = new ArrayList<>();
         Path dir = Paths.get(".");
@@ -222,4 +221,12 @@ public class KeystoreUtil {
         return publicKeyNames;
     }
 
+    public KeyStore loadKeystoreWithoutPassword() throws Exception {
+        KeyStore keystore = KeyStore.getInstance(KEYSTORE_TYPE);
+        try (FileInputStream fis = new FileInputStream(KEYSTORE_FILE)) {
+            keystore.load(fis, null);
+        }
+        return keystore;
+    }
+    
 }

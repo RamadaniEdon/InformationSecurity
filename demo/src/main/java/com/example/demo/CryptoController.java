@@ -59,7 +59,8 @@ public class CryptoController {
     @PostMapping("/generate/aes")
     public ResponseEntity<String> generateAESKey(@RequestBody GenerateKeyRequest request) {
         try {
-            SecretKey secretKey = cryptoService.generateAESKey(request.getKeySize(), request.getRandomAlgorithm(), request.getSeed());
+            SecretKey secretKey = cryptoService.generateAESKey(request.getKeySize(), request.getRandomAlgorithm(),
+                    request.getSeed());
             String aesAlias = "aes_" + request.getAlias();
             cryptoService.storeAESKey(aesAlias, secretKey, request.getPassword().toCharArray());
             return ResponseEntity.ok(Base64.getEncoder().encodeToString(secretKey.getEncoded()));
@@ -128,7 +129,8 @@ public class CryptoController {
     @PostMapping("/generate/rsa")
     public ResponseEntity<String> generateRSAKeyPair(@RequestBody GenerateKeyRequest request) {
         try {
-            KeyPair keyPair = cryptoService.generateRSAKeyPair(request.getKeySize(), request.getRandomAlgorithm(), request.getSeed());
+            KeyPair keyPair = cryptoService.generateRSAKeyPair(request.getKeySize(), request.getRandomAlgorithm(),
+                    request.getSeed());
             String rsaAlias = "rsa_" + request.getAlias();
             cryptoService.storeRSAKeyPair(rsaAlias, keyPair, request.getPassword().toCharArray());
             return ResponseEntity.ok("RSA key pair generated and stored successfully");
@@ -165,7 +167,8 @@ public class CryptoController {
     @PostMapping("/generate/dsa")
     public ResponseEntity<String> generateDSAKeyPair(@RequestBody GenerateKeyRequest request) {
         try {
-            KeyPair keyPair = cryptoService.generateDSAKeyPair(request.getKeySize(), request.getRandomAlgorithm(), request.getSeed());
+            KeyPair keyPair = cryptoService.generateDSAKeyPair(request.getKeySize(), request.getRandomAlgorithm(),
+                    request.getSeed());
             String dsaAlias = "dsa_" + request.getAlias();
             cryptoService.storeDSAKeyPair(dsaAlias, keyPair, request.getPassword().toCharArray());
             return ResponseEntity.ok("DSA key pair generated and stored successfully");
@@ -202,17 +205,32 @@ public class CryptoController {
     }
 
     @GetMapping("/rsa/public")
-    public ResponseEntity<String> getRSAPublicKey(@RequestParam String alias, @RequestParam String password) {
+    public ResponseEntity<String> getRSAPublicKeyNoPassword(@RequestParam String alias) {
         try {
-            char[] passwordArray = password.toCharArray();
-            PublicKey publicKey = cryptoService.loadPublicKey(alias, passwordArray);
+            PublicKey publicKey = cryptoService.loadPublicKeyNoPassword(alias, "RSA");
             if (publicKey != null) {
                 return ResponseEntity.ok(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
             } else {
                 return ResponseEntity.badRequest().body("Public key not found");
             }
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error loading public key: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error loading public key: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/dsa/public")
+    public ResponseEntity<String> getDSAPublicKeyNoPassword(@RequestParam String alias) {
+        try {
+            PublicKey publicKey = cryptoService.loadPublicKeyNoPassword(alias, "DSA");
+            if (publicKey != null) {
+                return ResponseEntity.ok(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
+            } else {
+                return ResponseEntity.badRequest().body("Public key not found");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error loading public key: " + e.getMessage());
         }
     }
 
@@ -274,7 +292,7 @@ public class CryptoController {
             return ResponseEntity.badRequest().body("Error deleting DSA key pair: " + e.getMessage());
         }
     }
-    
+
     @GetMapping("/public-keys")
     public ResponseEntity<List<String>> getAllPublicKeyNames() {
         try {

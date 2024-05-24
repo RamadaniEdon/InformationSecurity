@@ -5,6 +5,7 @@ public class VerifyTextRequest {
     private String password;
     private String text;
     private String signature;
+    private String keystoreName;    
 
     public String getAlias() {
         return alias;
@@ -36,6 +37,14 @@ public class VerifyTextRequest {
 
     public void setSignature(String signature) {
         this.signature = signature;
+    }
+
+    public String getKeystoreName() {
+        return keystoreName;
+    }
+
+    public void setKeystoreName(String keystoreName) {
+        this.keystoreName = keystoreName;
     }
 
 }

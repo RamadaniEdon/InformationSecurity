@@ -10,13 +10,6 @@ import javax.crypto.SecretKey;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.SecureRandom;
-import java.security.Signature;
 import java.util.Base64;
 import java.util.List;
 import java.security.*;
@@ -35,17 +28,24 @@ public class CryptoController {
     public ResponseEntity<String> createKeystore(@RequestBody KeystoreRequest request) {
         try {
             char[] passwordArray = request.getPassword().toCharArray();
-            cryptoService.createKeystore(passwordArray);
-            return ResponseEntity.ok("Keystore created successfully");
+            String keystoreName = request.getName();
+            if (keystoreName == null || keystoreName.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Keystore name must be provided");
+            }
+            cryptoService.createKeystore(passwordArray, keystoreName);
+            return ResponseEntity.ok("Keystore '" + keystoreName + "' created successfully.");
+        } catch (KeyStoreException e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error creating keystore: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal error: " + e.getMessage());
         }
     }
+
 
     @PostMapping("/login-keystore")
     public ResponseEntity<Boolean> loginKeystore(@RequestBody KeystoreRequest request) {
         try {
-            boolean exists = keystoreUtil.keystoreExists(request.getPassword().toCharArray());
+            boolean exists = keystoreUtil.keystoreExists(request.getPassword().toCharArray(), request.getName());
             if (exists) {
                 return ResponseEntity.ok(true);
             } else {
@@ -59,10 +59,10 @@ public class CryptoController {
     @PostMapping("/generate/aes")
     public ResponseEntity<String> generateAESKey(@RequestBody GenerateKeyRequest request) {
         try {
-            SecretKey secretKey = cryptoService.generateAESKey(request.getKeySize(), request.getRandomAlgorithm(),
-                    request.getSeed());
+            SecretKey secretKey = cryptoService.generateAESKey(request.getKeySize(), request.getPassword().toCharArray(), request.getRandomAlgorithm(),
+                    request.getSeed(), request.getKeystoreName());
             String aesAlias = "aes_" + request.getAlias();
-            cryptoService.storeAESKey(aesAlias, secretKey, request.getPassword().toCharArray());
+            cryptoService.storeAESKey(aesAlias, secretKey, request.getPassword().toCharArray(), request.getKeystoreName());
             return ResponseEntity.ok(Base64.getEncoder().encodeToString(secretKey.getEncoded()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error generating/storing key: " + e.getMessage());
@@ -70,10 +70,10 @@ public class CryptoController {
     }
 
     @GetMapping("/load/aes")
-    public ResponseEntity<String> loadAESKey(@RequestParam String alias, @RequestParam String password) {
+    public ResponseEntity<String> loadAESKey(@RequestParam String alias, @RequestParam String password, @RequestParam String keystoreName) {
         try {
             char[] passwordArray = password.toCharArray();
-            SecretKey secretKey = cryptoService.loadAESKey(alias, passwordArray);
+            SecretKey secretKey = cryptoService.loadAESKey(alias, passwordArray, keystoreName);
             if (secretKey != null) {
                 return ResponseEntity.ok(Base64.getEncoder().encodeToString(secretKey.getEncoded()));
             } else {
@@ -88,12 +88,11 @@ public class CryptoController {
     public ResponseEntity<String> encryptAES(@RequestBody EncryptRequest request) {
         try {
             char[] passwordArray = request.getPassword().toCharArray();
-            SecretKey secretKey = cryptoService.loadAESKey(request.getAlias(), passwordArray);
+            SecretKey secretKey = cryptoService.loadAESKey(request.getAlias(), passwordArray, request.getKeystoreName());
             byte[] iv = new byte[12];
             new SecureRandom().nextBytes(iv);
-            byte[] encryptedData = cryptoService.encryptAES(request.getPlainText(), secretKey, iv);
-            String ivAndCipherText = Base64.getEncoder().encodeToString(iv) + ":"
-                    + Base64.getEncoder().encodeToString(encryptedData);
+            byte[] encryptedData = cryptoService.encryptAES(request.getPlainText(), secretKey, iv, request.getKeystoreName());
+            String ivAndCipherText = Base64.getEncoder().encodeToString(iv) + ":" + Base64.getEncoder().encodeToString(encryptedData);
             return ResponseEntity.ok(ivAndCipherText);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error encrypting data: " + e.getMessage());
@@ -104,11 +103,11 @@ public class CryptoController {
     public ResponseEntity<String> decryptAES(@RequestBody DecryptRequest request) {
         try {
             char[] passwordArray = request.getPassword().toCharArray();
-            SecretKey secretKey = cryptoService.loadAESKey(request.getAlias(), passwordArray);
+            SecretKey secretKey = cryptoService.loadAESKey(request.getAlias(), passwordArray, request.getKeystoreName());
             String[] parts = request.getCipherText().split(":");
             byte[] iv = Base64.getDecoder().decode(parts[0]);
             byte[] cipherText = Base64.getDecoder().decode(parts[1]);
-            String decryptedData = cryptoService.decryptAES(cipherText, secretKey, iv);
+            String decryptedData = cryptoService.decryptAES(cipherText, secretKey, iv, request.getKeystoreName());
             return ResponseEntity.ok(decryptedData);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error decrypting data: " + e.getMessage());
@@ -116,10 +115,10 @@ public class CryptoController {
     }
 
     @GetMapping("/aliases")
-    public ResponseEntity<List<String>> getAliases(@RequestParam String password) {
+    public ResponseEntity<List<String>> getAliases(@RequestParam String password, @RequestParam String keystoreName) {
         try {
             char[] passwordArray = password.toCharArray();
-            List<String> aliases = cryptoService.getAliases(passwordArray);
+            List<String> aliases = cryptoService.getAliases(passwordArray, keystoreName);
             return ResponseEntity.ok(aliases);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(null);
@@ -129,11 +128,11 @@ public class CryptoController {
     @PostMapping("/generate/rsa")
     public ResponseEntity<String> generateRSAKeyPair(@RequestBody GenerateKeyRequest request) {
         try {
-            KeyPair keyPair = cryptoService.generateRSAKeyPair(request.getKeySize(), request.getRandomAlgorithm(),
-                    request.getSeed());
+            KeyPair keyPair = cryptoService.generateRSAKeyPair(request.getKeySize(), request.getPassword().toCharArray(), request.getRandomAlgorithm(),
+                    request.getSeed(), request.getKeystoreName());
             String rsaAlias = "rsa_" + request.getAlias();
-            cryptoService.storeRSAKeyPair(rsaAlias, keyPair, request.getPassword().toCharArray());
-            return ResponseEntity.ok("RSA key pair generated and stored successfully");
+            cryptoService.storeRSAKeyPair(rsaAlias, keyPair, request.getPassword().toCharArray(), request.getKeystoreName());
+            return ResponseEntity.ok("RSA key pair generated and stored successfully in " + request.getKeystoreName());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error generating/storing RSA key pair: " + e.getMessage());
         }
@@ -142,9 +141,7 @@ public class CryptoController {
     @PostMapping("/encrypt/rsa")
     public ResponseEntity<String> encryptRSA(@RequestBody EncryptRequest request) {
         try {
-            // char[] passwordArray = request.getPassword().toCharArray();
-            PublicKey publicKey = cryptoService.loadPublicKeyNoPassword(request.getAlias(), "RSA");
-            byte[] encryptedData = cryptoService.encryptRSA(request.getPlainText(), publicKey);
+            byte[] encryptedData = cryptoService.encryptRSAWithPublicKeyFromFile(request.getPlainText(), request.getAlias());
             return ResponseEntity.ok(Base64.getEncoder().encodeToString(encryptedData));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error encrypting data: " + e.getMessage());
@@ -155,7 +152,7 @@ public class CryptoController {
     public ResponseEntity<String> decryptRSA(@RequestBody DecryptRequest request) {
         try {
             char[] passwordArray = request.getPassword().toCharArray();
-            PrivateKey privateKey = cryptoService.loadPrivateKey(request.getAlias(), passwordArray);
+            PrivateKey privateKey = cryptoService.loadPrivateKey(request.getAlias(), passwordArray, request.getKeystoreName());
             byte[] decodedData = Base64.getDecoder().decode(request.getCipherText());
             String decryptedData = cryptoService.decryptRSA(decodedData, privateKey);
             return ResponseEntity.ok(decryptedData);
@@ -167,10 +164,10 @@ public class CryptoController {
     @PostMapping("/generate/dsa")
     public ResponseEntity<String> generateDSAKeyPair(@RequestBody GenerateKeyRequest request) {
         try {
-            KeyPair keyPair = cryptoService.generateDSAKeyPair(request.getKeySize(), request.getRandomAlgorithm(),
-                    request.getSeed());
+            KeyPair keyPair = cryptoService.generateDSAKeyPair(request.getKeySize(), request.getPassword().toCharArray(), request.getRandomAlgorithm(),
+                    request.getSeed(), request.getKeystoreName());
             String dsaAlias = "dsa_" + request.getAlias();
-            cryptoService.storeDSAKeyPair(dsaAlias, keyPair, request.getPassword().toCharArray());
+            cryptoService.storeDSAKeyPair(dsaAlias, keyPair, request.getPassword().toCharArray(), request.getKeystoreName());
             return ResponseEntity.ok("DSA key pair generated and stored successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error generating/storing DSA key pair: " + e.getMessage());
@@ -181,7 +178,7 @@ public class CryptoController {
     public ResponseEntity<String> signText(@RequestBody EncryptRequest request) {
         try {
             char[] passwordArray = request.getPassword().toCharArray();
-            PrivateKey privateKey = cryptoService.loadPrivateKey(request.getAlias(), passwordArray);
+            PrivateKey privateKey = cryptoService.loadPrivateKey(request.getAlias(), passwordArray, request.getKeystoreName());
             byte[] data = request.getPlainText().getBytes();
             byte[] signature = cryptoService.signData(data, privateKey);
             return ResponseEntity.ok(Base64.getEncoder().encodeToString(signature));
@@ -191,14 +188,12 @@ public class CryptoController {
     }
 
     @PostMapping("/verify-text")
-    public ResponseEntity<String> verifyTextSignature(@RequestBody VerifyTextRequest request) {
+    public ResponseEntity<?> verifyTextSignature(@RequestBody VerifyTextRequest request) {
         try {
-            // char[] passwordArray = request.getPassword().toCharArray();
-            PublicKey publicKey = cryptoService.loadPublicKeyNoPassword(request.getAlias(), "DSA");
             byte[] data = request.getText().getBytes();
             byte[] signatureBytes = Base64.getDecoder().decode(request.getSignature());
-            boolean isValid = cryptoService.verifySignature(data, signatureBytes, publicKey);
-            return ResponseEntity.ok(isValid ? "Signature is valid" : "Signature is invalid");
+            boolean isValid = cryptoService.verifyDSASignatureFromFile(data, signatureBytes, request.getAlias());
+            return ResponseEntity.ok(isValid ? true : false);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error verifying signature: " + e.getMessage());
         }
@@ -207,7 +202,7 @@ public class CryptoController {
     @GetMapping("/rsa/public")
     public ResponseEntity<String> getRSAPublicKeyNoPassword(@RequestParam String alias) {
         try {
-            PublicKey publicKey = cryptoService.loadPublicKeyNoPassword(alias, "RSA");
+            PublicKey publicKey = keystoreUtil.loadPublicKeyFromPEM(alias, "RSA");
             if (publicKey != null) {
                 return ResponseEntity.ok(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
             } else {
@@ -222,7 +217,7 @@ public class CryptoController {
     @GetMapping("/dsa/public")
     public ResponseEntity<String> getDSAPublicKeyNoPassword(@RequestParam String alias) {
         try {
-            PublicKey publicKey = cryptoService.loadPublicKeyNoPassword(alias, "DSA");
+            PublicKey publicKey = keystoreUtil.loadPublicKeyFromPEM(alias, "DSA");
             if (publicKey != null) {
                 return ResponseEntity.ok(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
             } else {
@@ -235,10 +230,10 @@ public class CryptoController {
     }
 
     @GetMapping("/rsa/private")
-    public ResponseEntity<String> getRSAPrivateKey(@RequestParam String alias, @RequestParam String password) {
+    public ResponseEntity<String> getRSAPrivateKey(@RequestParam String alias, @RequestParam String password, @RequestParam String keystoreName) {
         try {
             char[] passwordArray = password.toCharArray();
-            PrivateKey privateKey = cryptoService.loadPrivateKey(alias, passwordArray);
+            PrivateKey privateKey = cryptoService.loadPrivateKey(alias, passwordArray, keystoreName);
             if (privateKey != null) {
                 return ResponseEntity.ok(Base64.getEncoder().encodeToString(privateKey.getEncoded()));
             } else {
@@ -253,29 +248,29 @@ public class CryptoController {
     public ResponseEntity<List<String>> filterAliases(@RequestBody FilterAliasesRequest request) {
         try {
             char[] passwordArray = request.getPassword().toCharArray();
-            List<String> filteredAliases = cryptoService.filterAliases(passwordArray, request.getFilter());
+            List<String> filteredAliases = cryptoService.filterAliases(passwordArray, request.getFilter(), request.getKeystoreName());
             return ResponseEntity.ok(filteredAliases);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(null);
         }
     }
 
-    @DeleteMapping("/delete/aes")
-    public ResponseEntity<String> deleteAESKey(@RequestParam String alias, @RequestParam String password) {
+@DeleteMapping("/delete/aes")
+    public ResponseEntity<String> deleteAESKey(@RequestParam String alias, @RequestParam String password, @RequestParam String keystoreName) {
         try {
             char[] passwordArray = password.toCharArray();
-            cryptoService.deleteAESKey(alias, passwordArray);
+            cryptoService.deleteAESKey(alias, passwordArray, keystoreName);
             return ResponseEntity.ok("AES key deleted successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error deleting AES key: " + e.getMessage());
         }
     }
 
-    @DeleteMapping("/delete/rsa")
-    public ResponseEntity<String> deleteRSAKeyPair(@RequestParam String alias, @RequestParam String password) {
+    @PostMapping("/delete/rsa")
+    public ResponseEntity<String> deleteRSAKeyPair(@RequestParam String alias, @RequestParam String password, @RequestParam String keystoreName) {
         try {
             char[] passwordArray = password.toCharArray();
-            cryptoService.deleteRSAKeyPair(alias, passwordArray);
+            cryptoService.deleteRSAKeyPair(alias, passwordArray, keystoreName);
             return ResponseEntity.ok("RSA key pair and PEM files deleted successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error deleting RSA key pair: " + e.getMessage());
@@ -283,10 +278,10 @@ public class CryptoController {
     }
 
     @DeleteMapping("/delete/dsa")
-    public ResponseEntity<String> deleteDSAKeyPair(@RequestParam String alias, @RequestParam String password) {
+    public ResponseEntity<String> deleteDSAKeyPair(@RequestParam String alias, @RequestParam String password, @RequestParam String keystoreName) {
         try {
             char[] passwordArray = password.toCharArray();
-            cryptoService.deleteDSAKeyPair(alias, passwordArray);
+            cryptoService.deleteDSAKeyPair(alias, passwordArray, keystoreName);
             return ResponseEntity.ok("DSA key pair and PEM files deleted successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error deleting DSA key pair: " + e.getMessage());

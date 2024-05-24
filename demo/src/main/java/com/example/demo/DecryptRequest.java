@@ -4,6 +4,7 @@ public class DecryptRequest {
     private String cipherText;
     private String alias;
     private String password;
+    private String keystoreName;
 
     public String getCipherText() {
         return cipherText;
@@ -28,4 +29,13 @@ public class DecryptRequest {
     public void setPassword(String password) {
         this.password = password;
     }
+
+    public String getKeystoreName() {
+        return keystoreName;
+    }
+
+    public void setKeystoreName(String keystoreName) {
+        this.keystoreName = keystoreName;
+    }
+
 }

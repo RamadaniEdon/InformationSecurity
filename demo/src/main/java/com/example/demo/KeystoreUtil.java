@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -19,6 +20,7 @@ import java.nio.file.Paths;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
@@ -39,27 +41,31 @@ public class KeystoreUtil {
         Security.addProvider(new BouncyCastleProvider());
     }
 
-    public void createKeystore(char[] password)
-            throws KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {
+    public void createKeystore(char[] password, String keystoreName) throws Exception {
+        Path keystorePath = Paths.get(keystoreName + ".jks");
+        if (Files.exists(keystorePath)) {
+            throw new Exception("Keystore '" + keystoreName + "' already exists.");
+        }
+
         KeyStore keystore = KeyStore.getInstance(KEYSTORE_TYPE);
         keystore.load(null, password);
-        try (FileOutputStream fos = new FileOutputStream(KEYSTORE_FILE)) {
+        try (FileOutputStream fos = new FileOutputStream(keystorePath.toFile())) {
             keystore.store(fos, password);
         }
     }
 
-    public void storeSecretKey(String alias, SecretKey secretKey, char[] password) throws Exception {
-        KeyStore keystore = loadKeystore(password);
-        KeyStore.SecretKeyEntry secretKeyEntry = new KeyStore.SecretKeyEntry(secretKey);
+    public void storeSecretKey(String alias, SecretKey secretKey, char[] password, String keystoreName) throws Exception {
+        KeyStore keystore = loadKeystore(password, keystoreName);
         KeyStore.ProtectionParameter entryPassword = new KeyStore.PasswordProtection(password);
+        KeyStore.SecretKeyEntry secretKeyEntry = new KeyStore.SecretKeyEntry(secretKey);
         keystore.setEntry(alias, secretKeyEntry, entryPassword);
-        try (FileOutputStream fos = new FileOutputStream(KEYSTORE_FILE)) {
+        try (FileOutputStream fos = new FileOutputStream(keystoreName + ".jks")) {
             keystore.store(fos, password);
         }
     }
 
-    public SecretKey loadSecretKey(String alias, char[] password) throws Exception {
-        KeyStore keystore = loadKeystore(password);
+    public SecretKey loadSecretKey(String alias, char[] password, String keystoreName) throws Exception {
+        KeyStore keystore = loadKeystore(password, keystoreName);
         KeyStore.ProtectionParameter entryPassword = new KeyStore.PasswordProtection(password);
         KeyStore.SecretKeyEntry secretKeyEntry = (KeyStore.SecretKeyEntry) keystore.getEntry(alias, entryPassword);
         return secretKeyEntry != null ? secretKeyEntry.getSecretKey() : null;
@@ -77,8 +83,8 @@ public class KeystoreUtil {
         return keyPairGenerator.generateKeyPair();
     }
 
-    public void storeRSAKeyPair(String alias, KeyPair keyPair, char[] password) throws Exception {
-        KeyStore keystore = loadKeystore(password);
+    public void storeRSAKeyPair(String alias, KeyPair keyPair, char[] password, String keystoreName) throws Exception {
+        KeyStore keystore = loadKeystore(password, keystoreName);
         X509Certificate certificate = generateSelfSignedCertificate(keyPair, "SHA256withRSA");
         KeyStore.PrivateKeyEntry privateKeyEntry = new KeyStore.PrivateKeyEntry(
                 keyPair.getPrivate(),
@@ -86,7 +92,7 @@ public class KeystoreUtil {
 
         KeyStore.ProtectionParameter entryPassword = new KeyStore.PasswordProtection(password);
         keystore.setEntry(alias, privateKeyEntry, entryPassword);
-        try (FileOutputStream fos = new FileOutputStream(KEYSTORE_FILE)) {
+        try (FileOutputStream fos = new FileOutputStream(keystoreName + ".jks")) {
             keystore.store(fos, password);
         }
 
@@ -94,8 +100,8 @@ public class KeystoreUtil {
         savePEMFile(alias + "_private.pem", keyPair.getPrivate().getEncoded(), "PRIVATE KEY");
     }
 
-    public void storeDSAKeyPair(String alias, KeyPair keyPair, char[] password) throws Exception {
-        KeyStore keystore = loadKeystore(password);
+    public void storeDSAKeyPair(String alias, KeyPair keyPair, char[] password, String keystoreName) throws Exception {
+        KeyStore keystore = loadKeystore(password, keystoreName);
         X509Certificate certificate = generateSelfSignedCertificate(keyPair, "SHA256withDSA");
         KeyStore.PrivateKeyEntry privateKeyEntry = new KeyStore.PrivateKeyEntry(
                 keyPair.getPrivate(),
@@ -103,7 +109,7 @@ public class KeystoreUtil {
 
         KeyStore.ProtectionParameter entryPassword = new KeyStore.PasswordProtection(password);
         keystore.setEntry(alias, privateKeyEntry, entryPassword);
-        try (FileOutputStream fos = new FileOutputStream(KEYSTORE_FILE)) {
+        try (FileOutputStream fos = new FileOutputStream(keystoreName + ".jks")) {
             keystore.store(fos, password);
         }
 
@@ -132,23 +138,23 @@ public class KeystoreUtil {
                 .getCertificate(certBuilder.build(signer));
     }
 
-    public PrivateKey loadPrivateKey(String alias, char[] password) throws Exception {
-        KeyStore keystore = loadKeystore(password);
+    public PrivateKey loadPrivateKey(String alias, char[] password, String keystoreName) throws Exception {
+        KeyStore keystore = loadKeystore(password, keystoreName);
         KeyStore.ProtectionParameter entryPassword = new KeyStore.PasswordProtection(password);
         KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keystore.getEntry(alias, entryPassword);
         return privateKeyEntry != null ? privateKeyEntry.getPrivateKey() : null;
     }
 
-    public PublicKey loadPublicKey(String alias, char[] password) throws Exception {
-        KeyStore keystore = loadKeystore(password);
+    public PublicKey loadPublicKey(String alias, char[] password, String keystoreName) throws Exception {
+        KeyStore keystore = loadKeystore(password, keystoreName);
         KeyStore.ProtectionParameter entryPassword = new KeyStore.PasswordProtection(password);
         KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keystore.getEntry(alias, entryPassword);
         return privateKeyEntry != null ? privateKeyEntry.getCertificate().getPublicKey() : null;
     }
 
-    public List<String> getAliases(char[] password) throws Exception {
+    public List<String> getAliases(char[] password, String keystoreName) throws Exception {
         KeyStore keystore = KeyStore.getInstance(KEYSTORE_TYPE);
-        try (FileInputStream fis = new FileInputStream(KEYSTORE_FILE)) {
+        try (FileInputStream fis = new FileInputStream(keystoreName + ".jks")) {
             keystore.load(fis, password);
         }
         Enumeration<String> aliases = keystore.aliases();
@@ -159,9 +165,10 @@ public class KeystoreUtil {
         return aliasList;
     }
 
-    private KeyStore loadKeystore(char[] password) throws Exception {
+    private KeyStore loadKeystore(char[] password, String keystoreName) throws Exception {
         KeyStore keystore = KeyStore.getInstance(KEYSTORE_TYPE);
-        try (FileInputStream fis = new FileInputStream(KEYSTORE_FILE)) {
+        Path keystorePath = Paths.get(keystoreName + ".jks");
+        try (FileInputStream fis = new FileInputStream(keystorePath.toFile())) {
             keystore.load(fis, password);
         }
         return keystore;
@@ -176,10 +183,10 @@ public class KeystoreUtil {
         }
     }
 
-    public boolean keystoreExists(char[] password) {
+    public boolean keystoreExists(char[] password, String keystoreName) {
         try {
             KeyStore keystore = KeyStore.getInstance(KEYSTORE_TYPE);
-            try (FileInputStream fis = new FileInputStream(KEYSTORE_FILE)) {
+            try (FileInputStream fis = new FileInputStream(keystoreName + ".jks")) {
                 keystore.load(fis, password);
                 return true;
             } catch (IOException | NoSuchAlgorithmException | CertificateException e) {
@@ -190,11 +197,12 @@ public class KeystoreUtil {
         }
     }
 
-    public void deleteKey(String alias, char[] password) throws Exception {
-        KeyStore keystore = loadKeystore(password);
+    public void deleteKey(String alias, char[] password, String keystoreName) throws Exception {
+        KeyStore keystore = loadKeystore(password, keystoreName);
         if (keystore.containsAlias(alias)) {
             keystore.deleteEntry(alias);
-            try (FileOutputStream fos = new FileOutputStream(KEYSTORE_FILE)) {
+            Path keystorePath = Paths.get(keystoreName + ".jks");
+            try (FileOutputStream fos = new FileOutputStream(keystorePath.toFile())) {
                 keystore.store(fos, password);
             }
         }
@@ -227,6 +235,24 @@ public class KeystoreUtil {
             keystore.load(fis, null);
         }
         return keystore;
+    }
+
+    public PublicKey loadPublicKeyFromPEM(String alias, String keyType) throws Exception {
+        String filename =  alias + "_public.pem";
+        Path path = Paths.get(filename);
+        if (!Files.exists(path)) {
+            throw new FileNotFoundException("PEM file for " + keyType + " public key not found: " + filename);
+        }
+        String key = new String(Files.readAllBytes(path));
+        String publicKeyPEM = key
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replace("-----END PUBLIC KEY-----", "")
+                .replaceAll("\\s", "");
+
+        byte[] encoded = Base64.getDecoder().decode(publicKeyPEM);
+        KeyFactory keyFactory = KeyFactory.getInstance(keyType);
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encoded);
+        return keyFactory.generatePublic(keySpec);
     }
     
 }

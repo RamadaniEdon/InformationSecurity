@@ -5,6 +5,7 @@ public class FilterAliasesRequest {
 
     private String filter;
     private String password;
+    private String keystoreName;
 
     public String getFilter() {
         return filter;
@@ -13,7 +14,6 @@ public class FilterAliasesRequest {
     public void setFilter(String filter) {
         this.filter = filter;
     }
-
 
     public FilterAliasesRequest() {
     }
@@ -63,6 +63,14 @@ public class FilterAliasesRequest {
             " filter='" + getFilter() + "'" +
             ", password='" + getPassword() + "'" +
             "}";
+    }
+
+    public String getKeystoreName() {
+        return this.keystoreName;
+    }
+
+    public void setKeystoreName(String keystoreName) {
+        this.keystoreName = keystoreName;
     }
     
 }

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { generateAESKey, getAESKey, getFilteredAliases } from '../services/api';
 
 const AES = () => {
-    const {token, setToken} = useAuth();
+    const {token, setToken, name} = useAuth();
     const [keyAlias, setKeyAlias] = useState('');
     const [keySize, setKeySize] = useState('');
     const [randomnessSource, setRandomnessSource] = useState('');
@@ -27,7 +27,7 @@ const AES = () => {
     // Call autoResizeDiv function whenever the generatedKey changes
     useEffect(() => {
         autoResizeDiv();
-        getFilteredAliases(token, "aes_").then((keys) => {
+        getFilteredAliases(token, "aes_", name).then((keys) => {
             setKeys(keys);
         });
     }, []);
@@ -42,7 +42,7 @@ const AES = () => {
     const handleGenerateKey = () => {
         // const randomKey = Math.random().toString(36).substr(2, 8);
         // setGeneratedKey(randomKey);
-        generateAESKey(token, keySize, keyAlias).then((key) => {
+        generateAESKey(token, keySize, keyAlias, randomnessSource ,name).then((key) => {
             resetState();
             setGeneratedKey(key);
             setKeys([...keys, "aes_"+keyAlias]);
@@ -55,7 +55,7 @@ const AES = () => {
     const handleSelectKey = (key) => {
         if(key){
             console.log(key)
-            getAESKey(token, key).then((key) => {
+            getAESKey(token, key, name).then((key) => {
                 setGeneratedKey(key);
             });
         }

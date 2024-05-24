@@ -6,12 +6,11 @@ import { createKeyStore } from '../services/api';
 function Home() {
     const { setToken } = useAuth();
     const [password, setPassword] = useState('');
+    const [name, setName] = useState(''); // New state variable for the name
 
     const handleLogin = () => {
-        // For this example, we're just using the password as the token.
-        // In a real application, you would verify the password and obtain a token from your authentication service.
-        createKeyStore(password).then((token) => {
-            setToken(password);
+        createKeyStore(password, name).then((token) => {
+            setToken(password, name);
         });
     };
 
@@ -19,6 +18,15 @@ function Home() {
         <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
             <VStack spacing={4} align="stretch" width="300px">
                 <Heading as="h1" textAlign="center">Home Page</Heading>
+                <FormControl>
+                    <FormLabel htmlFor="name">Name</FormLabel>
+                    <Input
+                        id="name"
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)} // Update the name state variable when the input changes
+                    />
+                </FormControl>
                 <FormControl>
                     <FormLabel htmlFor="password">Key Store Password</FormLabel>
                     <Input

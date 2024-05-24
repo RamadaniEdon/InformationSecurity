@@ -4,7 +4,7 @@ import { decryotRSA, encryptRSA, getFilteredAliases, getPublicKeys } from '../se
 import { useAuth } from '../context/AuthContext';
 
 const EncryptDecryptForm = ({ keys }) => {
-    const { token } = useAuth();
+    const { token, name } = useAuth();
     const [plainText, setPlainText] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
     const [result, setResult] = useState('');
@@ -32,7 +32,7 @@ const EncryptDecryptForm = ({ keys }) => {
     }, [keys, operation]);
 
     useEffect(() => {
-        getPublicKeys(token).then((keys) => {
+        getPublicKeys(token, name).then((keys) => {
             setAllKeys(keys.map((key) => key.replace('_public', '')).filter((key) => key.startsWith('rsa_')));
             updateCurrentKeys();
         });
@@ -62,7 +62,7 @@ const EncryptDecryptForm = ({ keys }) => {
             });
         }
         else {
-            decryotRSA(token, plainText, selectedKey).then((decryptedText) => {
+            decryotRSA(token, plainText, selectedKey, name).then((decryptedText) => {
                 setResult(decryptedText);
             });
         }

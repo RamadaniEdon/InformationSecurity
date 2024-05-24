@@ -2,11 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex } from '@chakra-ui/react';
 import DSAVerify from './DSAVerify';
 import DSASign from './DSASign';
-import { generateDSAKey, getRSAPrivateKey, getRSAPublicKey, getFilteredAliases } from '../services/api';
+import { generateDSAKey, getFilteredAliases, getDSAPrivateKey, getDSAPublicKey } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const DSA = () => {
-    const { token } = useAuth();
+    const { token, name } = useAuth();
     const [keyAlias, setKeyAlias] = useState('');
     const [keySize, setKeySize] = useState('');
     const [randomnessSource, setRandomnessSource] = useState('');
@@ -31,7 +31,7 @@ const DSA = () => {
     }, [privateKey, publicKey]);
 
     useEffect(() => {
-        getFilteredAliases(token, "dsa_").then((keys) => {
+        getFilteredAliases(token, "dsa_", name).then((keys) => {
             setKeys(keys);
         });
     }, [token]);
@@ -40,13 +40,13 @@ const DSA = () => {
         // Logic to generate the keys based on input values
         // For demonstration purposes, simply setting random strings as the keys
         const thisKeyAlias = "dsa_" + keyAlias;
-        generateDSAKey(token, keySize, keyAlias, randomnessSource).then((key) => {
+        generateDSAKey(token, keySize, keyAlias, randomnessSource, name).then((key) => {
             setSelectedKey(thisKeyAlias);
             setKeys([thisKeyAlias, ...keys]);
-            getRSAPrivateKey(token, thisKeyAlias).then((key) => {
+            getDSAPrivateKey(token, thisKeyAlias, name).then((key) => {
                 setPrivateKey(key);
             });
-            getRSAPublicKey(thisKeyAlias).then((key) => {
+            getDSAPublicKey(thisKeyAlias).then((key) => {
                 setPublicKey(key);
             });
         });
@@ -54,10 +54,10 @@ const DSA = () => {
 
     const handleSelectKey = (key) => {
         setSelectedKey(key);
-        getRSAPrivateKey(token, key).then((key) => {
+        getDSAPrivateKey(token, key, name).then((key) => {
             setPrivateKey(key);
         });
-        getRSAPublicKey(key).then((key) => {
+        getDSAPublicKey(key).then((key) => {
             setPublicKey(key);
         });
     };

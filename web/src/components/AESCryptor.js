@@ -4,7 +4,7 @@ import { decryotAES, encryptAES } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const EncryptDecryptForm = ({keys, setKeys}) => {
-    const {token, setToken} = useAuth();
+    const {token, setToken, name} = useAuth();
     const [plainText, setPlainText] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
     console.log(selectedKey)
@@ -35,12 +35,12 @@ const EncryptDecryptForm = ({keys, setKeys}) => {
             });
         }
         else if(op === 'encrypt'){
-            encryptAES(token, plainText, selectedKey).then((res) => {
+            encryptAES(token, plainText, selectedKey, name).then((res) => {
                 setResult(res);
             });
         }
         else {
-            decryotAES(token, plainText, selectedKey).then((res) => {
+            decryotAES(token, plainText, selectedKey, name).then((res) => {
                 setResult(res);
             });
         }

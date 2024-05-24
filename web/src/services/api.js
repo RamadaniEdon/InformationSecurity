@@ -46,17 +46,29 @@ async function sendRequest(url, { method = "GET", body, headers = {} }) {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-export async function createKeyStore(password) {
+export async function createKeyStore(password, name) {
     return sendRequest(BACKEND_URL + `create-keystore`, {
         method: "POST",
         body: {
             password,
+            name,
         },
     });
 }
 
-export async function generateAESKey(password, keySize, alias, randomAlgorithm) {
-    if(!randomAlgorithm) randomAlgorithm = undefined;
+export async function loginKeyStore(password, name) {
+    return sendRequest(BACKEND_URL + `login-keystore`, {
+        method: "POST",
+        body: {
+            password,
+            name,
+        },
+    });
+}
+
+export async function generateAESKey(password, keySize, alias, randomAlgorithm, keystoreName) {
+    // if(!randomAlgorithm) randomAlgorithm = undefined;
+    console.log(password, keySize, alias, randomAlgorithm, keystoreName)
     return sendRequest(BACKEND_URL + `generate/aes`, {
         method: "POST",
         body: {
@@ -64,50 +76,55 @@ export async function generateAESKey(password, keySize, alias, randomAlgorithm) 
             alias,
             password,
             randomAlgorithm,
+            keystoreName,
         },
     });
 }
 
-export async function getAESKey(password, alias) {
+export async function getAESKey(password, alias, keystoreName) {
     const url = new URL(BACKEND_URL + `load/aes`);
-    url.search = new URLSearchParams({ alias, password }).toString();
+    url.search = new URLSearchParams({ alias, password, keystoreName }).toString();
     return sendRequest(url, {});
 }
 
 
-export async function encryptAES(password, plainText, alias) {
+export async function encryptAES(password, plainText, alias, keystoreName) {
     return sendRequest(BACKEND_URL + `encrypt/aes`, {
         method: "POST",
         body: {
             plainText,
             alias,
             password,
+            keystoreName,
         },
     });
 }
 
 
-export async function decryotAES(password, cipherText, alias) {
+export async function decryotAES(password, cipherText, alias, keystoreName) {
     return sendRequest(BACKEND_URL + `decrypt/aes`, {
         method: "POST",
         body: {
             cipherText,
             alias,
             password,
+            keystoreName,
         },
     });
 }
 
-export async function getAliases(password) {
+export async function getAliases(password, keystoreName) {
     return sendRequest(BACKEND_URL + `aliases`, {
         headers: {
             password,
+            keystoreName,
         },
     });
 }
 
 
-export async function generateRSAKey(password, keySize, alias, randomAlgorithm) {
+export async function generateRSAKey(password, keySize, alias, randomAlgorithm, keystoreName) {
+    if(!randomAlgorithm) randomAlgorithm = undefined;
     return sendRequest(BACKEND_URL + `generate/rsa`, {
         method: "POST",
         body: {
@@ -115,6 +132,7 @@ export async function generateRSAKey(password, keySize, alias, randomAlgorithm) 
             alias,
             password,
             randomAlgorithm,
+            keystoreName,
         },
     });
 }
@@ -130,19 +148,22 @@ export async function encryptRSA(plainText, alias) {
     });
 }
 
-export async function decryotRSA(password, cipherText, alias) {
+export async function decryotRSA(password, cipherText, alias, keystoreName) {
     return sendRequest(BACKEND_URL + `decrypt/rsa`, {
         method: "POST",
         body: {
             cipherText,
             alias,
             password,
+            keystoreName,
         },
     });
 }
 
 
-export async function generateDSAKey(password, keySize, alias, randomAlgorithm) {
+export async function generateDSAKey(password, keySize, alias, randomAlgorithm, keystoreName) {
+    // if(!randomAlgorithm) randomAlgorithm = undefined;
+    console.log(password, keySize, alias, randomAlgorithm, keystoreName)
     return sendRequest(BACKEND_URL + `generate/dsa`, {
         method: "POST",
         body: {
@@ -150,18 +171,20 @@ export async function generateDSAKey(password, keySize, alias, randomAlgorithm) 
             alias,
             password,
             randomAlgorithm,
+            keystoreName,
         },
     });
 }
 
 
-export async function singText(password, plainText, alias) {
+export async function singText(password, plainText, alias, keystoreName) {
     return sendRequest(BACKEND_URL + `sign-text`, {
         method: "POST",
         body: {
             plainText,
             alias,
             password,
+            keystoreName,
         },
     });
 }
@@ -178,24 +201,38 @@ export async function verifySignature(alias, text, signature) {
     });
 }
 
+export async function getDSAPrivateKey(password, alias, keystoreName) {
+    const url = new URL(BACKEND_URL + `dsa/private`);
+    url.search = new URLSearchParams({ alias, password, keystoreName }).toString();
+    return sendRequest(url, {});
+}
+
+export async function getDSAPublicKey(alias) {
+    const url = new URL(BACKEND_URL + `dsa/public`);
+    url.search = new URLSearchParams({ alias}).toString();
+    return sendRequest(url, {});
+}
+
 export async function getRSAPublicKey(alias) {
+    console.log("PUBLIKI", alias)
     const url = new URL(BACKEND_URL + `rsa/public`);
     url.search = new URLSearchParams({ alias}).toString();
     return sendRequest(url, {});
 }
 
-export async function getRSAPrivateKey(password, alias) {
+export async function getRSAPrivateKey(password, alias, keystoreName) {
     const url = new URL(BACKEND_URL + `rsa/private`);
-    url.search = new URLSearchParams({ alias, password}).toString();
+    url.search = new URLSearchParams({ alias, password, keystoreName}).toString();
     return sendRequest(url, {});
 }
 
-export async function getFilteredAliases(password, filter) {
+export async function getFilteredAliases(password, filter, keystoreName) {
     return sendRequest(BACKEND_URL + `filter-aliases`, {
         method: "POST",
         body: {
             password,
             filter,
+            keystoreName
         },
     });
 }

@@ -5,7 +5,7 @@ import { generateRSAKey, getRSAPrivateKey, getRSAPublicKey, getFilteredAliases, 
 import { useAuth } from '../context/AuthContext';
 
 const RSA = () => {
-    const { token } = useAuth();
+    const { token, name } = useAuth();
     const [keyAlias, setKeyAlias] = useState('');
     const [keySize, setKeySize] = useState('');
     const [randomnessSource, setRandomnessSource] = useState('');
@@ -30,7 +30,7 @@ const RSA = () => {
     }, [privateKey, publicKey]);
 
     useEffect(() => {
-        getFilteredAliases(token, "rsa_").then((keys) => {
+        getFilteredAliases(token, "rsa_", name).then((keys) => {
             setKeys(keys);
         });
     }, []);
@@ -43,12 +43,12 @@ const RSA = () => {
         // setPrivateKey(randomPrivateKey);
         // setPublicKey(randomPublicKey);
 
-        generateRSAKey(token, keySize, keyAlias, randomnessSource).then((key) => {
+        generateRSAKey(token, keySize, keyAlias, randomnessSource, name).then((key) => {
             
             console.log(key);
             setKeys(["rsa_"+keyAlias,...keys]);
             setSelectedKey("rsa_"+keyAlias);
-            getRSAPrivateKey(token, "rsa_"+keyAlias).then((key) => {
+            getRSAPrivateKey(token, "rsa_"+keyAlias, name).then((key) => {
                 setPrivateKey(key);
             });
             getRSAPublicKey("rsa_"+keyAlias).then((key) => {
@@ -67,7 +67,7 @@ const RSA = () => {
     const handleSelectKey = (key) => {
         setSelectedKey(key);
         if(!key) return resetKeys();
-        getRSAPrivateKey(token, key).then((privateK) => {
+        getRSAPrivateKey(token, key, name).then((privateK) => {
             setPrivateKey(privateK);
         });
         getRSAPublicKey(key).then((publicK) => {

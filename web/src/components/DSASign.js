@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { singText } from '../services/api';
 
 const SignComponent = ({ keys }) => {
-    const { token } = useAuth();
+    const { token, name } = useAuth();
     const [plainText, setPlainText] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
     const [result, setResult] = useState('');
@@ -28,7 +28,7 @@ const SignComponent = ({ keys }) => {
 
     const handleSigning = () => {
         // Placeholder logic for encryption/decryption
-        singText(token, plainText, selectedKey).then((res) => {
+        singText(token, plainText, selectedKey, name).then((res) => {
             setResult(res);
         });
     };

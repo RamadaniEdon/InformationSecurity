@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getFilteredAliases, getPublicKeys, verifySignature } from '../services/api';
 
 const RSACVerify = ({ keys }) => {
-    const { token } = useAuth();
+    const { token, name } = useAuth();
     const [textToVerify, setTextToVerify] = useState('');
     const [signature, setSignature] = useState('');
     const [selectedKey, setSelectedKey] = useState('');

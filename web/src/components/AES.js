@@ -113,7 +113,7 @@ const AES = () => {
                                     <Select value={randomnessSource} onChange={(e) => setRandomnessSource(e.target.value)}>
                                         <option value="">Select randomness</option>
                                         <option value="DRBG">DRBG</option>
-                                        <option value="WINDOWS-PRNG">WINDOWS-PRNG</option>
+                                        <option value="NONCEANDIV">NONCEANDIV</option>
                                         <option value="SHA1PRNG">SHA1PRNG</option>
                                     </Select>
                                 </FormControl>

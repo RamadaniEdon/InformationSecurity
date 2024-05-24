@@ -1,5 +1,4 @@
-const BACKEND_URL =
-    process.env.REACT_APP_BACKEND_URL || "http://localhost:8090/api/crypto/";
+const BACKEND_URL = "https://information-security-da3ec77391a1.herokuapp.com/api/crypto/";
 
 // returns a Promise
 function transformToJsonOrTextPromise(response) {

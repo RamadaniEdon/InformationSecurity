@@ -6,6 +6,7 @@ public class GenerateKeyRequest {
     private String password;
     private String randomAlgorithm;
     private Long seed;
+    private String keystoreName;
 
     public int getKeySize() {
         return keySize;
@@ -46,4 +47,13 @@ public class GenerateKeyRequest {
     public void setSeed(Long seed) {
         this.seed = seed;
     }
+
+    public String getKeystoreName() {
+        return keystoreName;
+    }
+
+    public void setKeystoreName(String keystoreName) {
+        this.keystoreName = keystoreName;
+    }
+
 }

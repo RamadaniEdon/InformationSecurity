@@ -82,9 +82,9 @@ const DSA = () => {
                                     <FormLabel>Key Size</FormLabel>
                                     <Select value={keySize} onChange={(e) => setKeySize(e.target.value)}>
                                         <option value="">Select key size</option>
+                                        <option value="512">512 bits</option>
                                         <option value="1024">1024 bits</option>
                                         <option value="2048">2048 bits</option>
-                                        <option value="4096">4096 bits</option>
                                     </Select>
                                 </FormControl>
                                 <FormControl id="randomnessSource" mb={4}>

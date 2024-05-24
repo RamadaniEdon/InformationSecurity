@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex } from '@chakra-ui/react';
+import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex, Toast } from '@chakra-ui/react';
 import Cryptor from './AESCryptor';
 import { useAuth } from '../context/AuthContext';
 import { generateAESKey, getAESKey, getFilteredAliases } from '../services/api';
+import { useToast } from '@chakra-ui/react';
+import { redToast, yellowToast } from '../utils/helpers';
 
 const AES = () => {
     const {token, setToken, name} = useAuth();
@@ -12,6 +14,7 @@ const AES = () => {
     const [generatedKey, setGeneratedKey] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
     const [keys, setKeys] = useState([]);
+    const toast = useToast();
 
     // Ref for the div element
     const divRef = useRef(null);
@@ -29,6 +32,8 @@ const AES = () => {
         autoResizeDiv();
         getFilteredAliases(token, "aes_", name).then((keys) => {
             setKeys(keys);
+        }).catch((error) => {
+            redToast(toast, "Error fetching keys.");
         });
     }, []);
 
@@ -40,14 +45,29 @@ const AES = () => {
     }
 
     const handleGenerateKey = () => {
-        // const randomKey = Math.random().toString(36).substr(2, 8);
-        // setGeneratedKey(randomKey);
+        if(!keyAlias){
+            yellowToast(toast, "Please give the key a name.");
+            return;
+        }
+        else if(!keySize){
+            yellowToast(toast, "Please select a key size.");
+            return;
+        }
+        else if(keys.includes("aes_"+keyAlias)){
+            yellowToast(toast, "Name already Exists. Please choose another name.");
+            return;
+        }
+
         generateAESKey(token, keySize, keyAlias, randomnessSource ,name).then((key) => {
             resetState();
             setGeneratedKey(key);
             setKeys([...keys, "aes_"+keyAlias]);
             setSelectedKey("aes_"+keyAlias);
-        })
+        }).catch((error) => {
+            redToast(toast, "Please, try another randomnessSource or try again later.");
+            setGeneratedKey("Error generating key.");
+        });
+        setGeneratedKey("Loading...")
 
 
     };
@@ -57,7 +77,11 @@ const AES = () => {
             console.log(key)
             getAESKey(token, key, name).then((key) => {
                 setGeneratedKey(key);
+            }).catch((error) => {
+                redToast(toast, "Error fetching key.");
+                setGeneratedKey("Error fetching key.");
             });
+            setGeneratedKey("Loading...")
         }
         setSelectedKey(key);
         // Logic to handle the selected key

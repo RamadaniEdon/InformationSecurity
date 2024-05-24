@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex, Textarea, useToast } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext';
 import { getFilteredAliases, getPublicKeys, verifySignature } from '../services/api';
+import { redToast, yellowToast } from '../utils/helpers';
 
 const RSACVerify = ({ keys }) => {
     const { token, name } = useAuth();
@@ -25,10 +26,12 @@ const RSACVerify = ({ keys }) => {
 
     useEffect(() => {
         getPublicKeys().then((keys) => {
-            const mapped = keys.map((key) => key.replace('_public,', ''));
+            const mapped = keys.map((key) => key.replace('_public', ''));
             setAllKeys(mapped.filter((key) => key.startsWith('dsa_')));
+        }).catch((error) => {
+            redToast(toast, "Network error. Please try again later");
         });
-        setSelectedKey(keys[0]);
+        setSelectedKey(keys[0] || '');
     }, [token]);
 
 
@@ -48,6 +51,18 @@ const RSACVerify = ({ keys }) => {
 
     const handleVerify = () => {
         // Replace with actual verification logic
+        if(!selectedKey){
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+            yellowToast(toast, "You need to generate a key first.");
+            return;
+        }
+        else if(!textToVerify || !signature){
+            yellowToast(toast, "Text and signature are required.");
+            return;
+        }
         verifySignature(selectedKey, textToVerify, signature).then((isVerified) => {
             toast({
                 title: isVerified ? 'Verification Successful' : 'Verification Failed',
@@ -56,6 +71,8 @@ const RSACVerify = ({ keys }) => {
                 duration: 5000,
                 isClosable: true,
             });
+        }).catch((error) => {
+            redToast(toast, "Not the correct key OR invalid signature.");
         });
     };
 

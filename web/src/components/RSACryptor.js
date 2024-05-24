@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Heading, FormControl, FormLabel, Textarea, Select, Button, Flex, Radio, RadioGroup, Stack } from '@chakra-ui/react';
+import { Box, Heading, FormControl, FormLabel, Textarea, Select, Button, Flex, Radio, RadioGroup, Stack, useToast } from '@chakra-ui/react';
 import { decryotRSA, encryptRSA, getFilteredAliases, getPublicKeys } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { redToast, yellowToast } from '../utils/helpers';
 
 const EncryptDecryptForm = ({ keys }) => {
     const { token, name } = useAuth();
@@ -11,6 +12,7 @@ const EncryptDecryptForm = ({ keys }) => {
     const [operation, setOperation] = useState('encrypt');
     const [allKeys, setAllKeys] = useState([]);
     const [currentKeys, setCurrentKeys] = useState([]);
+    const toast = useToast();
 
     const divRef = useRef(null);
 
@@ -35,14 +37,14 @@ const EncryptDecryptForm = ({ keys }) => {
         getPublicKeys(token, name).then((keys) => {
             setAllKeys(keys.map((key) => key.replace('_public', '')).filter((key) => key.startsWith('rsa_')));
             updateCurrentKeys();
+        }).catch((error) => {
+            redToast(toast, "Network error. Please try again later");
         });
     }, [token]);
 
     const getAllKeys = () => {
-        console.log("HINA", allKeys)
         const combined = [...keys, ...allKeys];
         const unique = [...new Set(combined)];
-        console.log("HINA", unique)
         return unique;
     }
 
@@ -56,15 +58,33 @@ const EncryptDecryptForm = ({ keys }) => {
 
     const handleEncryptDecrypt = () => {
         // Placeholder logic for encryption/decryption
-        if (operation === 'encrypt') {
+        if(!selectedKey){
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+            yellowToast(toast, "You need to generate a key first.");
+        }
+        else if (!plainText) {
+            yellowToast(toast, "Enter the text to encrypt/decrypt.");
+        }
+        else if (operation === 'encrypt') {
             encryptRSA(plainText, selectedKey).then((encryptedText) => {
                 setResult(encryptedText);
+            }).catch((error) => {
+                redToast(toast, "Error encrypting text.");
+                setResult("Error encrypting text.");
             });
+            setResult("Loading...");
         }
         else {
             decryotRSA(token, plainText, selectedKey, name).then((decryptedText) => {
                 setResult(decryptedText);
+            }).catch((error) => {
+                redToast(toast, "Error! Please check the key, or the ciphertext.");
+                setResult("Failed to decrypting text.");
             });
+            setResult("Loading...");
         }
     };
 

@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Heading, FormControl, FormLabel, Textarea, Select, Button, Flex } from '@chakra-ui/react';
+import { Box, Heading, FormControl, FormLabel, Textarea, Select, Button, Flex, useToast } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext';
 import { singText } from '../services/api';
+import { redToast, greenToast, yellowToast } from '../utils/helpers';
 
 const SignComponent = ({ keys }) => {
     const { token, name } = useAuth();
     const [plainText, setPlainText] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
     const [result, setResult] = useState('');
+    const toast = useToast();
 
     const divRef = useRef(null);
 
@@ -28,9 +30,27 @@ const SignComponent = ({ keys }) => {
 
     const handleSigning = () => {
         // Placeholder logic for encryption/decryption
+        if(!selectedKey){
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+            yellowToast(toast, "You need to generate a key first.");
+            return;
+        }
+        else if(!plainText){
+            yellowToast(toast, "Enter the text to sign.");
+            return;
+        } 
         singText(token, plainText, selectedKey, name).then((res) => {
             setResult(res);
+            handleFileDownloadWithText(res);
+            greenToast(toast, "Text signed successfully. Downloading the results...");
+        }).catch((error) => {
+            redToast(toast, "Error signing text. Please try again later.");
+            setResult("Error signing text.");
         });
+        setResult("Loading...");
     };
 
     const handleFileUpload = (event) => {
@@ -48,6 +68,15 @@ const SignComponent = ({ keys }) => {
     const handleFileDownload = () => {
         const element = document.createElement("a");
         const file = new Blob([result], { type: 'text/plain' });
+        element.href = URL.createObjectURL(file);
+        element.download = "result.txt";
+        document.body.appendChild(element);
+        element.click();
+    };
+
+    const handleFileDownloadWithText = (res) => {
+        const element = document.createElement("a");
+        const file = new Blob([res], { type: 'text/plain' });
         element.href = URL.createObjectURL(file);
         element.download = "result.txt";
         document.body.appendChild(element);

@@ -24,8 +24,17 @@ export const AuthProvider = ({ children }) => {
     navigate('/encrypt');
   };
 
+  const logout = () => {
+    setToken('');
+    setName('');
+    localStorage.removeItem('token');
+    localStorage.removeItem('name');
+    navigate('/');
+  };
+  
+
   return (
-    <AuthContext.Provider value={{ token, setToken: setTokenAndRedirect, name }}>
+    <AuthContext.Provider value={{ token, setToken: setTokenAndRedirect, name, logout }}>
       {children}
     </AuthContext.Provider>
   );

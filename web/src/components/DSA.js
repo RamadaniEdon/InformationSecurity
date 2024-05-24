@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex } from '@chakra-ui/react';
+import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex, useToast } from '@chakra-ui/react';
 import DSAVerify from './DSAVerify';
 import DSASign from './DSASign';
-import { generateDSAKey, getFilteredAliases, getDSAPrivateKey, getDSAPublicKey } from '../services/api';
+import { generateDSAKey, getFilteredAliases, getDSAPrivateKey, getDSAPublicKey, getPublicKeys } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { redToast, yellowToast } from '../utils/helpers';
 
 const DSA = () => {
     const { token, name } = useAuth();
@@ -14,6 +15,8 @@ const DSA = () => {
     const [publicKey, setPublicKey] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
     const [keys, setKeys] = useState([]);
+    const [publicKeys, setPublicKeys] = useState([]);
+    const toast = useToast();
 
     const privateDivRef = useRef(null);
     const publicDivRef = useRef(null);
@@ -33,32 +36,67 @@ const DSA = () => {
     useEffect(() => {
         getFilteredAliases(token, "dsa_", name).then((keys) => {
             setKeys(keys);
+        }).catch((error) => {
+            redToast(toast, "Error fetching keys.");
+        });
+
+        getPublicKeys().then((keys) => {
+            setPublicKeys(keys.map((key) => key.replace('_public', '')).filter((key) => key.startsWith('dsa_')));
         });
     }, [token]);
 
     const handleGenerateKeys = () => {
-        // Logic to generate the keys based on input values
-        // For demonstration purposes, simply setting random strings as the keys
+        if (!keyAlias) {
+            yellowToast(toast, "Please give the key a name.");
+            return;
+        }
+        else if (!keySize) {
+            yellowToast(toast, "Please select a key size.");
+            return;
+        }
+        else if ([...keys, ...publicKeys].includes("dsa_" + keyAlias)) {
+            yellowToast(toast, "Name already Exists. Please choose another name.");
+            return;
+        }
+        
         const thisKeyAlias = "dsa_" + keyAlias;
         generateDSAKey(token, keySize, keyAlias, randomnessSource, name).then((key) => {
             setSelectedKey(thisKeyAlias);
             setKeys([thisKeyAlias, ...keys]);
             getDSAPrivateKey(token, thisKeyAlias, name).then((key) => {
                 setPrivateKey(key);
+            }).catch((error) => {
+                redToast(toast, "Error fetching private key.");
+                setPrivateKey("Error fetching private key.");
             });
             getDSAPublicKey(thisKeyAlias).then((key) => {
                 setPublicKey(key);
+            }).catch((error) => {
+                redToast(toast, "Error fetching public key.");
+                setPublicKey("Error fetching public key.");
             });
+        }).catch((error) => {
+            redToast(toast, "Please, try another randomnessSource or try again later.");
+            setPrivateKey("Error generating key");
+            setPublicKey("Error generating key");
         });
+        setPrivateKey("Loading...");
+        setPublicKey("Loading...");
     };
 
     const handleSelectKey = (key) => {
         setSelectedKey(key);
         getDSAPrivateKey(token, key, name).then((key) => {
             setPrivateKey(key);
+        }).catch((error) => {
+            redToast(toast, "Error fetching private key.");
+            setPrivateKey("Error fetching private key. Try again later.");
         });
         getDSAPublicKey(key).then((key) => {
             setPublicKey(key);
+        }).catch((error) => {
+            redToast(toast, "Error fetching public key.");
+            setPublicKey("Error fetching public key. Try again later");
         });
     };
 

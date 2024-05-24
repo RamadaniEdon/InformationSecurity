@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Heading, FormControl, FormLabel, Textarea, Select, Button, Flex } from '@chakra-ui/react';
+import { Box, Heading, FormControl, FormLabel, Textarea, Select, Button, Flex, useToast } from '@chakra-ui/react';
 import { decryotAES, encryptAES } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { redToast, yellowToast } from '../utils/helpers';
 
 const EncryptDecryptForm = ({keys, setKeys}) => {
     const {token, setToken, name} = useAuth();
@@ -9,6 +10,7 @@ const EncryptDecryptForm = ({keys, setKeys}) => {
     const [selectedKey, setSelectedKey] = useState('');
     console.log(selectedKey)
     const [result, setResult] = useState('');
+    const toast = useToast();
 
     const divRef = useRef(null);
 
@@ -33,16 +35,28 @@ const EncryptDecryptForm = ({keys, setKeys}) => {
                 top: 0,
                 behavior: "smooth"
             });
+            yellowToast(toast, "You need to generate a key first.");
+        }
+        else if(!plainText){
+            yellowToast(toast, "Enter the text to encrypt/decrypt.");
         }
         else if(op === 'encrypt'){
             encryptAES(token, plainText, selectedKey, name).then((res) => {
                 setResult(res);
+            }).catch((error) => {
+                redToast(toast, "Error encrypting text.");
+                setResult("Error encrypting text.");
             });
+            setResult("Loading...");
         }
         else {
             decryotAES(token, plainText, selectedKey, name).then((res) => {
                 setResult(res);
+            }).catch((error) => {
+                redToast(toast, "Error! Please check the key, or the ciphertext.");
+                setResult("Error decrypting text.");
             });
+            setResult("Loading...");
         }
     };
 

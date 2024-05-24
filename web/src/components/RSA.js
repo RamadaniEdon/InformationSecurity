@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex } from '@chakra-ui/react';
+import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex, useToast } from '@chakra-ui/react';
 import Cryptor from './RSACryptor';
 import { generateRSAKey, getRSAPrivateKey, getRSAPublicKey, getFilteredAliases, getPublicKeys } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { redToast, yellowToast } from '../utils/helpers';
 
 const RSA = () => {
     const { token, name } = useAuth();
@@ -13,6 +14,8 @@ const RSA = () => {
     const [publicKey, setPublicKey] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
     const [keys, setKeys] = useState([]);
+    const [publicKeys, setPublicKeys] = useState([]);
+    const toast = useToast();
 
     const privateDivRef = useRef(null);
     const publicDivRef = useRef(null);
@@ -32,29 +35,54 @@ const RSA = () => {
     useEffect(() => {
         getFilteredAliases(token, "rsa_", name).then((keys) => {
             setKeys(keys);
+        }).catch((error) => {
+            redToast(toast, "Error fetching keys.");
         });
-    }, []);
+        getPublicKeys().then((keys) => {
+            setPublicKeys(keys.map((key) => key.replace('_public', '')).filter((key) => key.startsWith('rsa_')));
+        }).catch((error) => {
+            redToast(toast, "Network error. Please try again later");
+        });
+
+    }, [token]);
 
     const handleGenerateKeys = () => {
-        // Logic to generate the keys based on input values
-        // For demonstration purposes, simply setting random strings as the keys
-        // const randomPrivateKey = Math.random().toString(36).substr(2, 8);
-        // const randomPublicKey = Math.random().toString(36).substr(2, 8);
-        // setPrivateKey(randomPrivateKey);
-        // setPublicKey(randomPublicKey);
+        if (!keyAlias) {
+            yellowToast(toast, "Please give the key a name.");
+            return;
+        }
+        else if (!keySize) {
+            yellowToast(toast, "Please select a key size.");
+            return;
+        }
+        else if ([...keys, ...publicKeys].includes("rsa_"+keyAlias)) {
+            yellowToast(toast, "Name already Exists. Please choose another name.");
+            return; 
+        }
 
         generateRSAKey(token, keySize, keyAlias, randomnessSource, name).then((key) => {
             
-            console.log(key);
             setKeys(["rsa_"+keyAlias,...keys]);
             setSelectedKey("rsa_"+keyAlias);
             getRSAPrivateKey(token, "rsa_"+keyAlias, name).then((key) => {
                 setPrivateKey(key);
+            }).catch((error) => {
+                redToast(toast, "Error fetching private key.");
+                setPrivateKey("Error fetching private key.");
             });
             getRSAPublicKey("rsa_"+keyAlias).then((key) => {
                 setPublicKey(key);
+            }).catch((error) => {
+                redToast(toast, "Error fetching public key.");
+                setPublicKey("Error fetching public key.");
             });
+        }).catch((error) => {
+            redToast(toast, "Please, try another randomnessSource or try again later.");
+            setPrivateKey("Error generating key.");
+            setPublicKey("Error generating key.");
         });
+        setPrivateKey("Loading...");
+        setPublicKey("Loading...");
 
     };
 
@@ -69,11 +97,18 @@ const RSA = () => {
         if(!key) return resetKeys();
         getRSAPrivateKey(token, key, name).then((privateK) => {
             setPrivateKey(privateK);
+        }).catch((error) => {
+            redToast(toast, "Error fetching private key.");
+            setPrivateKey("Error fetching private key.");
         });
         getRSAPublicKey(key).then((publicK) => {
             setPublicKey(publicK);
+        }).catch((error) => {
+            redToast(toast, "Error fetching public key.");
+            setPublicKey("Error fetching public key.");
         });
-        // Logic to handle the selected key
+        setPrivateKey("Loading...");
+        setPublicKey("Loading...");
     };
 
     return (

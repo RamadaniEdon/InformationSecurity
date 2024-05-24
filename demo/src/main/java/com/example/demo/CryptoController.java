@@ -244,6 +244,21 @@ public class CryptoController {
         }
     }
 
+    @GetMapping("/dsa/private")
+    public ResponseEntity<String> getDSAPrivateKey(@RequestParam String alias, @RequestParam String password, @RequestParam String keystoreName) {
+        try {
+            char[] passwordArray = password.toCharArray();
+            PrivateKey privateKey = cryptoService.loadPrivateKey(alias, passwordArray, keystoreName);
+            if (privateKey != null) {
+                return ResponseEntity.ok(Base64.getEncoder().encodeToString(privateKey.getEncoded()));
+            } else {
+                return ResponseEntity.badRequest().body("Private key not found");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error loading private key: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/filter-aliases")
     public ResponseEntity<List<String>> filterAliases(@RequestBody FilterAliasesRequest request) {
         try {

@@ -33,6 +33,7 @@ const AES = () => {
     }, []);
 
     const resetState = () => {
+        setKeyAlias('');
         setKeySize('');
         setRandomnessSource('');
         setGeneratedKey('');
@@ -87,8 +88,9 @@ const AES = () => {
                                     <FormLabel>Randomness Source</FormLabel>
                                     <Select value={randomnessSource} onChange={(e) => setRandomnessSource(e.target.value)}>
                                         <option value="">Select randomness</option>
-                                        <option value="hardware">Hardware</option>
-                                        <option value="software">Software</option>
+                                        <option value="DRBG">DRBG</option>
+                                        <option value="WINDOWS-PRNG">WINDOWS-PRNG</option>
+                                        <option value="SHA1PRNG">SHA1PRNG</option>
                                     </Select>
                                 </FormControl>
                                 <Button colorScheme="teal" onClick={handleGenerateKey} mb={4} mt={4}>Generate Key</Button>

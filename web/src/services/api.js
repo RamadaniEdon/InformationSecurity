@@ -55,13 +55,15 @@ export async function createKeyStore(password) {
     });
 }
 
-export async function generateAESKey(password, keySize, alias) {
+export async function generateAESKey(password, keySize, alias, randomAlgorithm) {
+    if(!randomAlgorithm) randomAlgorithm = undefined;
     return sendRequest(BACKEND_URL + `generate/aes`, {
         method: "POST",
         body: {
             keySize,
             alias,
             password,
+            randomAlgorithm,
         },
     });
 }
@@ -73,15 +75,13 @@ export async function getAESKey(password, alias) {
 }
 
 
-export async function encryptAES(password, plainText, alias, randomAlgorithm, seed) {
+export async function encryptAES(password, plainText, alias) {
     return sendRequest(BACKEND_URL + `encrypt/aes`, {
         method: "POST",
         body: {
             plainText,
             alias,
             password,
-            randomAlgorithm,
-            seed,
         },
     });
 }
@@ -107,26 +107,25 @@ export async function getAliases(password) {
 }
 
 
-export async function generateRSAKey(password, keySize, alias) {
+export async function generateRSAKey(password, keySize, alias, randomAlgorithm) {
     return sendRequest(BACKEND_URL + `generate/rsa`, {
         method: "POST",
         body: {
             keySize,
             alias,
             password,
+            randomAlgorithm,
         },
     });
 }
 
-export async function encryptRSA(password, plainText, alias, randomAlgorithm, seed) {
+export async function encryptRSA(plainText, alias) {
     return sendRequest(BACKEND_URL + `encrypt/rsa`, {
         method: "POST",
         body: {
             plainText,
             alias,
-            password,
-            randomAlgorithm,
-            seed,
+            // password,
         },
     });
 }
@@ -143,63 +142,55 @@ export async function decryotRSA(password, cipherText, alias) {
 }
 
 
-export async function generateDSAKey(password, keySize, alias) {
+export async function generateDSAKey(password, keySize, alias, randomAlgorithm) {
     return sendRequest(BACKEND_URL + `generate/dsa`, {
         method: "POST",
         body: {
             keySize,
             alias,
             password,
+            randomAlgorithm,
         },
     });
 }
 
 
-export async function singText(password, plainText, alias, randomAlgorithm, seed) {
+export async function singText(password, plainText, alias) {
     return sendRequest(BACKEND_URL + `sign-text`, {
         method: "POST",
         body: {
             plainText,
             alias,
             password,
-            randomAlgorithm,
-            seed,
         },
     });
 }
 
-export async function verifySignature(password, alias, text, signature) {
+export async function verifySignature(alias, text, signature) {
     return sendRequest(BACKEND_URL + `verify-text`, {
         method: "POST",
         body: {
             alias,
-            password,
+            // password,
             text,
             signature,
         },
     });
 }
 
-export async function getRSAPublicKey(password, alias) {
-    return sendRequest(BACKEND_URL + `rsa/public`, {
-        headers: {
-            alias,
-            password,
-        },
-    });
+export async function getRSAPublicKey(alias) {
+    const url = new URL(BACKEND_URL + `rsa/public`);
+    url.search = new URLSearchParams({ alias}).toString();
+    return sendRequest(url, {});
 }
 
 export async function getRSAPrivateKey(password, alias) {
-    return sendRequest(BACKEND_URL + `rsa/private`, {
-        headers: {
-            alias,
-            password,
-        },
-    });
+    const url = new URL(BACKEND_URL + `rsa/private`);
+    url.search = new URLSearchParams({ alias, password}).toString();
+    return sendRequest(url, {});
 }
 
 export async function getFilteredAliases(password, filter) {
-    console.log("EDo", password)
     return sendRequest(BACKEND_URL + `filter-aliases`, {
         method: "POST",
         body: {
@@ -207,4 +198,8 @@ export async function getFilteredAliases(password, filter) {
             filter,
         },
     });
+}
+
+export async function getPublicKeys() {
+    return sendRequest(BACKEND_URL + `public-keys`, {});
 }

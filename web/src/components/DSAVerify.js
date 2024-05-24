@@ -1,11 +1,36 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex, Textarea, useToast } from '@chakra-ui/react';
+import { useAuth } from '../context/AuthContext';
+import { getFilteredAliases, getPublicKeys, verifySignature } from '../services/api';
 
-const RSACVerify = () => {
+const RSACVerify = ({ keys }) => {
+    const { token } = useAuth();
     const [textToVerify, setTextToVerify] = useState('');
     const [signature, setSignature] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
+    const [allKeys, setAllKeys] = useState([]);
+    const [currentKeys, setCurrentKeys] = useState([]); // [key1, key2, key3]
     const toast = useToast();
+
+    const getAllKeys = () => {
+        const combined = [...keys, ...allKeys];
+        const unique = [...new Set(combined)];
+        return unique;
+    }
+
+    useEffect(() => {
+        setCurrentKeys([...getAllKeys()]);
+        setSelectedKey(keys[0]);
+    }, [keys, allKeys]);
+
+    useEffect(() => {
+        getPublicKeys().then((keys) => {
+            const mapped = keys.map((key) => key.replace('_public,', ''));
+            setAllKeys(mapped.filter((key) => key.startsWith('dsa_')));
+        });
+        setSelectedKey(keys[0]);
+    }, [token]);
+
 
     const handleUploadText = (event) => {
         const file = event.target.files[0];
@@ -23,14 +48,14 @@ const RSACVerify = () => {
 
     const handleVerify = () => {
         // Replace with actual verification logic
-        const isVerified = Math.random() > 0.5;
-
-        toast({
-            title: isVerified ? 'Verification Successful' : 'Verification Failed',
-            description: isVerified ? 'The signature is verified.' : 'The signature could not be verified.',
-            status: isVerified ? 'success' : 'error',
-            duration: 5000,
-            isClosable: true,
+        verifySignature(selectedKey, textToVerify, signature).then((isVerified) => {
+            toast({
+                title: isVerified ? 'Verification Successful' : 'Verification Failed',
+                description: isVerified ? 'The signature is verified.' : 'The signature could not be verified.',
+                status: isVerified ? 'success' : 'error',
+                duration: 5000,
+                isClosable: true,
+            });
         });
     };
 
@@ -75,9 +100,12 @@ const RSACVerify = () => {
                 <FormControl mb={4}>
                     <FormLabel>Select Key</FormLabel>
                     <Select value={selectedKey} onChange={(e) => setSelectedKey(e.target.value)}>
-                        {/* Populate with available keys */}
-                        <option value="key1">Key 1</option>
-                        <option value="key2">Key 2</option>
+                        {currentKeys.length > 0 ?
+                            currentKeys.map((key) => (
+                                <option key={key} value={key}>{key}</option>
+                            ))
+                            : <option value="">No keys available</option>
+                        }
                     </Select>
                 </FormControl>
                 <Button colorScheme="teal" onClick={handleVerify} mb={4}>Verify</Button>

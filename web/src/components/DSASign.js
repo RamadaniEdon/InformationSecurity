@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Heading, FormControl, FormLabel, Textarea, Select, Button, Flex } from '@chakra-ui/react';
+import { useAuth } from '../context/AuthContext';
+import { singText } from '../services/api';
 
-const SignComponent = () => {
+const SignComponent = ({ keys }) => {
+    const { token } = useAuth();
     const [plainText, setPlainText] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
     const [result, setResult] = useState('');
-    const [operation, setOperation] = useState('');
 
     const divRef = useRef(null);
 
@@ -20,11 +22,15 @@ const SignComponent = () => {
         autoResizeDiv();
     }, [result]);
 
-    const handleEncryptDecrypt = (op) => {
-        setOperation(op);
+    useEffect(() => {
+        setSelectedKey(keys[0]);
+    }, [keys]);
+
+    const handleSigning = () => {
         // Placeholder logic for encryption/decryption
-        const operationResult = `${op === 'encrypt' ? 'Encrypted' : 'Decrypted'}: ${plainText}`;
-        setResult(operationResult);
+        singText(token, plainText, selectedKey).then((res) => {
+            setResult(res);
+        });
     };
 
     const handleFileUpload = (event) => {
@@ -56,10 +62,10 @@ const SignComponent = () => {
                     <Box width="45%">
                         <FormControl id="plainText" mb={4}>
                             <FormLabel>Plain Text</FormLabel>
-                            <Textarea 
-                                value={plainText} 
-                                onChange={(e) => setPlainText(e.target.value)} 
-                                placeholder="Enter your plain text here..." 
+                            <Textarea
+                                value={plainText}
+                                onChange={(e) => setPlainText(e.target.value)}
+                                placeholder="Enter your plain text here..."
                                 size="md"
                                 resize="vertical"
                             />
@@ -82,20 +88,19 @@ const SignComponent = () => {
                         </Button>
                         <FormControl id="selectedKey" mb={4} mt={4}>
                             <FormLabel>Select Key</FormLabel>
-                            <Select 
-                                value={selectedKey} 
+                            <Select
+                                value={selectedKey}
                                 onChange={(e) => setSelectedKey(e.target.value)}
-                                placeholder="Select key"
                             >
-                                {/* Option values will be populated dynamically */}
-                                <option value="key1">Key 1</option>
-                                <option value="key2">Key 2</option>
+                                {keys.length > 0 ? keys.map((key) => (
+                                    <option key={key} value={key}>{key}</option>
+                                )) : <option value="">No keys available</option>}
                             </Select>
                         </FormControl>
                         <Flex justifyContent="space-between" mt={4}>
-                            <Button 
-                                colorScheme="teal" 
-                                onClick={() => handleEncryptDecrypt('encrypt')}
+                            <Button
+                                colorScheme="teal"
+                                onClick={handleSigning}
                                 flex="1"
                                 mr={2}
                             >
@@ -106,7 +111,7 @@ const SignComponent = () => {
                     <Box width="45%">
                         <FormControl mb={4}>
                             <FormLabel>Result</FormLabel>
-                            <div 
+                            <div
                                 ref={divRef}
                                 contentEditable={true} // Disable content editing
                                 style={{

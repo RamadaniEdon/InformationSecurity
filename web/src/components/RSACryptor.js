@@ -1,11 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Heading, FormControl, FormLabel, Textarea, Select, Button, Flex } from '@chakra-ui/react';
+import { Box, Heading, FormControl, FormLabel, Textarea, Select, Button, Flex, Radio, RadioGroup, Stack } from '@chakra-ui/react';
+import { decryotRSA, encryptRSA, getFilteredAliases, getPublicKeys } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-const EncryptDecryptForm = () => {
+const EncryptDecryptForm = ({ keys }) => {
+    const { token } = useAuth();
     const [plainText, setPlainText] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
     const [result, setResult] = useState('');
-    const [operation, setOperation] = useState('');
+    const [operation, setOperation] = useState('encrypt');
+    const [allKeys, setAllKeys] = useState([]);
+    const [currentKeys, setCurrentKeys] = useState([]);
 
     const divRef = useRef(null);
 
@@ -20,11 +25,47 @@ const EncryptDecryptForm = () => {
         autoResizeDiv();
     }, [result]);
 
-    const handleEncryptDecrypt = (op) => {
-        setOperation(op);
+
+    useEffect(() => {
+        updateCurrentKeys();
+        setSelectedKey(keys[0] || '');
+    }, [keys, operation]);
+
+    useEffect(() => {
+        getPublicKeys(token).then((keys) => {
+            setAllKeys(keys.map((key) => key.replace('_public', '')).filter((key) => key.startsWith('rsa_')));
+            updateCurrentKeys();
+        });
+    }, [token]);
+
+    const getAllKeys = () => {
+        console.log("HINA", allKeys)
+        const combined = [...keys, ...allKeys];
+        const unique = [...new Set(combined)];
+        console.log("HINA", unique)
+        return unique;
+    }
+
+    const updateCurrentKeys = () => {
+        if (operation === 'encrypt') {
+            setCurrentKeys([...getAllKeys()]);
+        } else {
+            setCurrentKeys(keys);
+        }
+    };
+
+    const handleEncryptDecrypt = () => {
         // Placeholder logic for encryption/decryption
-        const operationResult = `${op === 'encrypt' ? 'Encrypted' : 'Decrypted'}: ${plainText}`;
-        setResult(operationResult);
+        if (operation === 'encrypt') {
+            encryptRSA(plainText, selectedKey).then((encryptedText) => {
+                setResult(encryptedText);
+            });
+        }
+        else {
+            decryotRSA(token, plainText, selectedKey).then((decryptedText) => {
+                setResult(decryptedText);
+            });
+        }
     };
 
     const handleFileUpload = (event) => {
@@ -55,11 +96,11 @@ const EncryptDecryptForm = () => {
                 <Flex justifyContent="space-between">
                     <Box width="45%">
                         <FormControl id="plainText" mb={4}>
-                            <FormLabel>Plain Text</FormLabel>
-                            <Textarea 
-                                value={plainText} 
-                                onChange={(e) => setPlainText(e.target.value)} 
-                                placeholder="Enter your plain text here..." 
+                            <FormLabel>Text</FormLabel>
+                            <Textarea
+                                value={plainText}
+                                onChange={(e) => setPlainText(e.target.value)}
+                                placeholder="Enter your text here..."
                                 size="md"
                                 resize="vertical"
                             />
@@ -82,39 +123,39 @@ const EncryptDecryptForm = () => {
                         </Button>
                         <FormControl id="selectedKey" mb={4} mt={4}>
                             <FormLabel>Select Key</FormLabel>
-                            <Select 
-                                value={selectedKey} 
+                            <Select
+                                value={selectedKey}
                                 onChange={(e) => setSelectedKey(e.target.value)}
-                                placeholder="Select key"
                             >
-                                {/* Option values will be populated dynamically */}
-                                <option value="key1">Key 1</option>
-                                <option value="key2">Key 2</option>
+                                
+                                {currentKeys.length > 0 ? (
+                                    currentKeys.map((key) => (
+                                        <option key={key} value={key}>{key}</option>
+                                    ))
+                                ) : (
+                                    <option value="">No keys available</option>
+
+                                )}
                             </Select>
                         </FormControl>
-                        <Flex justifyContent="space-between" mt={4}>
-                            <Button 
-                                colorScheme="teal" 
-                                onClick={() => handleEncryptDecrypt('encrypt')}
-                                flex="1"
-                                mr={2}
-                            >
-                                Encrypt
-                            </Button>
-                            <Button 
-                                colorScheme="teal" 
-                                onClick={() => handleEncryptDecrypt('decrypt')}
-                                flex="1"
-                                ml={2}
-                            >
-                                Decrypt
-                            </Button>
-                        </Flex>
+                        <Box mt={4}>
+                            <RadioGroup onChange={setOperation} value={operation}>
+                                <Flex direction="row" justifyContent="space-around">
+                                    <Stack direction="row">
+                                        <Radio value="encrypt">Encrypt</Radio>
+                                        <Radio value="decrypt">Decrypt</Radio>
+                                    </Stack>
+                                    <Button colorScheme="teal" onClick={handleEncryptDecrypt}>
+                                        Process
+                                    </Button>
+                                </Flex>
+                            </RadioGroup>
+                        </Box>
                     </Box>
                     <Box width="45%">
                         <FormControl mb={4}>
                             <FormLabel>Result</FormLabel>
-                            <div 
+                            <div
                                 ref={divRef}
                                 contentEditable={true} // Disable content editing
                                 style={{

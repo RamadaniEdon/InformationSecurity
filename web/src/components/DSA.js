@@ -1,16 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Heading, FormControl, FormLabel, Input, Select, Button, Flex } from '@chakra-ui/react';
-import Cryptor from './AESCryptor';
 import DSAVerify from './DSAVerify';
 import DSASign from './DSASign';
+import { generateDSAKey, getRSAPrivateKey, getRSAPublicKey, getFilteredAliases } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const DSA = () => {
+    const { token } = useAuth();
     const [keyAlias, setKeyAlias] = useState('');
     const [keySize, setKeySize] = useState('');
     const [randomnessSource, setRandomnessSource] = useState('');
     const [privateKey, setPrivateKey] = useState('');
     const [publicKey, setPublicKey] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
+    const [keys, setKeys] = useState([]);
 
     const privateDivRef = useRef(null);
     const publicDivRef = useRef(null);
@@ -27,18 +30,36 @@ const DSA = () => {
         autoResizeDiv(publicDivRef);
     }, [privateKey, publicKey]);
 
+    useEffect(() => {
+        getFilteredAliases(token, "dsa_").then((keys) => {
+            setKeys(keys);
+        });
+    }, [token]);
+
     const handleGenerateKeys = () => {
         // Logic to generate the keys based on input values
         // For demonstration purposes, simply setting random strings as the keys
-        const randomPrivateKey = Math.random().toString(36).substr(2, 8);
-        const randomPublicKey = Math.random().toString(36).substr(2, 8);
-        setPrivateKey(randomPrivateKey);
-        setPublicKey(randomPublicKey);
+        const thisKeyAlias = "dsa_" + keyAlias;
+        generateDSAKey(token, keySize, keyAlias, randomnessSource).then((key) => {
+            setSelectedKey(thisKeyAlias);
+            setKeys([thisKeyAlias, ...keys]);
+            getRSAPrivateKey(token, thisKeyAlias).then((key) => {
+                setPrivateKey(key);
+            });
+            getRSAPublicKey(thisKeyAlias).then((key) => {
+                setPublicKey(key);
+            });
+        });
     };
 
     const handleSelectKey = (key) => {
         setSelectedKey(key);
-        // Logic to handle the selected key
+        getRSAPrivateKey(token, key).then((key) => {
+            setPrivateKey(key);
+        });
+        getRSAPublicKey(key).then((key) => {
+            setPublicKey(key);
+        });
     };
 
     return (
@@ -50,12 +71,17 @@ const DSA = () => {
                         <Box width="48%">
                             <form>
                                 <FormControl id="keyAlias" mb={4}>
-                                    <FormLabel>Key Alias</FormLabel>
-                                    <Input type="text" value={keyAlias} onChange={(e) => setKeyAlias(e.target.value)} />
+                                    <FormLabel>Key Name</FormLabel>
+                                    <Input
+                                        type="text"
+                                        placeholder='Enter the key name...'
+                                        value={keyAlias}
+                                        onChange={(e) => setKeyAlias(e.target.value)} />
                                 </FormControl>
                                 <FormControl id="keySize" mb={4}>
                                     <FormLabel>Key Size</FormLabel>
                                     <Select value={keySize} onChange={(e) => setKeySize(e.target.value)}>
+                                        <option value="">Select key size</option>
                                         <option value="1024">1024 bits</option>
                                         <option value="2048">2048 bits</option>
                                         <option value="4096">4096 bits</option>
@@ -64,8 +90,10 @@ const DSA = () => {
                                 <FormControl id="randomnessSource" mb={4}>
                                     <FormLabel>Randomness Source</FormLabel>
                                     <Select value={randomnessSource} onChange={(e) => setRandomnessSource(e.target.value)}>
-                                        <option value="hardware">Hardware</option>
-                                        <option value="software">Software</option>
+                                        <option value="">Select randomness</option>
+                                        <option value="DRBG">DRBG</option>
+                                        <option value="WINDOWS-PRNG">WINDOWS-PRNG</option>
+                                        <option value="SHA1PRNG">SHA1PRNG</option>
                                     </Select>
                                 </FormControl>
                                 <Button colorScheme="teal" onClick={handleGenerateKeys} mb={4} mt={4}>Generate Keys</Button>
@@ -76,10 +104,14 @@ const DSA = () => {
                             <FormControl mb={4}>
                                 <FormLabel>Select Key</FormLabel>
                                 <Select value={selectedKey} onChange={(e) => handleSelectKey(e.target.value)}>
-                                    {/* Option values will be populated dynamically */}
+                                    <option value="">No keys available</option>
+                                    {keys.map((key) => (
+                                        <option key={key} value={key}>{key}</option>
+                                    ))}
                                 </Select>
                             </FormControl>
-                            <Box>
+                            <FormControl>
+                                <FormLabel>Private Key</FormLabel>
                                 <div
                                     ref={privateDivRef}
                                     contentEditable={false}
@@ -88,6 +120,7 @@ const DSA = () => {
                                         borderRadius: '0.25rem',
                                         padding: '0.5rem',
                                         minHeight: '7rem',
+                                        maxHeight: '10rem',
                                         overflow: 'auto',
                                         resize: 'none',
                                         width: '100%',
@@ -97,6 +130,7 @@ const DSA = () => {
                                 >
                                     {privateKey ? privateKey : 'View the private key here...'}
                                 </div>
+                                <FormLabel>Public Key</FormLabel>
                                 <div
                                     ref={publicDivRef}
                                     contentEditable={false}
@@ -105,6 +139,7 @@ const DSA = () => {
                                         borderRadius: '0.25rem',
                                         padding: '0.5rem',
                                         minHeight: '7rem',
+                                        maxHeight: '10rem',
                                         overflow: 'auto',
                                         resize: 'none',
                                         width: '100%',
@@ -113,13 +148,13 @@ const DSA = () => {
                                 >
                                     {publicKey ? publicKey : 'View the public key here...'}
                                 </div>
-                            </Box>
+                            </FormControl>
                         </Box>
                     </Flex>
                 </Box>
             </Box>
-            <DSASign />
-            <DSAVerify />
+            <DSASign keys={keys} />
+            <DSAVerify keys={keys}/>
         </>
     );
 };

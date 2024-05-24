@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Heading, FormControl, FormLabel, Textarea, Select, Button, Flex } from '@chakra-ui/react';
-import { encryptAES } from '../services/api';
+import { decryotAES, encryptAES } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const EncryptDecryptForm = ({keys, setKeys}) => {
     const {token, setToken} = useAuth();
     const [plainText, setPlainText] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
+    console.log(selectedKey)
     const [result, setResult] = useState('');
-    const [operation, setOperation] = useState('');
 
     const divRef = useRef(null);
 
@@ -23,6 +23,10 @@ const EncryptDecryptForm = ({keys, setKeys}) => {
         autoResizeDiv();
     }, [result]);
 
+    useEffect(() => {
+        setSelectedKey(keys[keys.length - 1] || '');
+    }, [keys]);
+
     const handleEncryptDecrypt = (op) => {
         if(!selectedKey){
             window.scrollTo({
@@ -30,11 +34,15 @@ const EncryptDecryptForm = ({keys, setKeys}) => {
                 behavior: "smooth"
             });
         }
-        if(op === 'encrypt'){
-            // encryptAES(token, plainText, sele)
+        else if(op === 'encrypt'){
+            encryptAES(token, plainText, selectedKey).then((res) => {
+                setResult(res);
+            });
         }
         else {
-            console.log("Decrypting")
+            decryotAES(token, plainText, selectedKey).then((res) => {
+                setResult(res);
+            });
         }
     };
 
@@ -66,11 +74,11 @@ const EncryptDecryptForm = ({keys, setKeys}) => {
                 <Flex justifyContent="space-between">
                     <Box width="45%">
                         <FormControl id="plainText" mb={4}>
-                            <FormLabel>Plain Text</FormLabel>
+                            <FormLabel>Text</FormLabel>
                             <Textarea 
                                 value={plainText} 
                                 onChange={(e) => setPlainText(e.target.value)} 
-                                placeholder="Enter your plain text here..." 
+                                placeholder="Enter your text here..." 
                                 size="md"
                                 resize="vertical"
                             />
@@ -152,6 +160,7 @@ const EncryptDecryptForm = ({keys, setKeys}) => {
                             onClick={handleFileDownload}
                             mt={2}
                         >
+                            
                             Download Result
                         </Button>
                     </Box>
